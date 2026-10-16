@@ -1,0 +1,38 @@
+{
+  "name": "neighborhood-quest",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Neighborhood Quest — Explore, Capture, Remember. AI-powered 3D neighborhood exploration game for young homebuyers built with Gemini 4 Argon & Three.js.",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npx tsx watch server/index.ts\" \"vite\"",
+    "build": "vite build",
+    "start": "npx tsx server/index.ts",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@google/genai": "^2.3.0",
+    "canvas-confetti": "^1.9.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "lucide-react": "^0.475.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.173.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.4",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/three": "^0.173.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.19.2",
+    "typescript": "~5.7.2",
+    "vite": "^6.1.0"
+  }
+}

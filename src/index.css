@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: 'Fredoka', 'Nunito', system-ui, -apple-system, sans-serif;
+    --font-sans: 'Nunito', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #FAF3E8;
+    color: #2F3E46;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+dialog::backdrop {
+  background: rgba(47, 62, 70, 0.45);
+  backdrop-filter: blur(4px);
+}
