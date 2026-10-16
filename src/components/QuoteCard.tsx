@@ -26,48 +26,59 @@ export const QuoteCard: React.FC<QuoteCardProps> = ({
 
   return (
     <section className="bg-white rounded-2xl p-4 border border-[#edf0f3] shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col gap-2.5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <div className="w-6 h-6 rounded-full bg-[#f7f9fb] border border-[#edf0f3] flex items-center justify-center shrink-0">
-            <CharacterAvatar character={activeCharacter} size={22} />
+          <div className="w-7 h-7 rounded-full bg-[#f7f9fb] border border-[#edf0f3] flex items-center justify-center shrink-0">
+            <CharacterAvatar character={activeCharacter} size={24} />
           </div>
-          <span className="px-2 py-0.5 rounded-md bg-[#e8f3ff] text-[#3182f6] text-[11px] font-bold tracking-tight">
+          <span className="px-2 py-0.5 rounded-md bg-[#e8f3ff] text-[#0051ff] text-[11px] font-extrabold tracking-tight">
             {lang === 'ko' ? '현장 임장 메모' : 'Field Memory Note'}
           </span>
-          <span className="text-[12px] text-[#8b95a1]">
-            · {author} ({perspective === 'gyodong' ? (lang === 'ko' ? '교동' : 'Gyodong') : (lang === 'ko' ? '핑구' : 'Pingu')})
+          <span className="text-[12px] font-bold text-[#4e5968]">
+            ·{' '}
+            {perspective === 'pingu'
+              ? lang === 'ko'
+                ? '핑구 (출퇴근·현실·환금성 중심)'
+                : 'Pingu (Commute · Practical · Liquidity)'
+              : lang === 'ko'
+                ? '교동 (감성·산책·분위기 중심)'
+                : 'Gyodong (Emotional · Walk · Vibe)'}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
           {onSwitchPerspective && (
-            <button
-              type="button"
-              onClick={() => onSwitchPerspective(perspective === 'pingu' ? 'gyodong' : 'pingu')}
-              className="px-2 py-0.5 rounded-full bg-[#f2f4f6] hover:bg-[#e5e8eb] text-[10px] font-bold text-[#4e5968] transition-colors flex items-center gap-1 cursor-pointer"
-              title={
-                lang === 'ko'
-                  ? '같은 물리적 동네를 본 핑구 vs 교동의 관점 비교'
-                  : 'Compare Pingu vs Gyodong perspective on the same neighborhood'
-              }
-            >
-              <CharacterAvatar character={activeCharacter} size={16} />
-              <span>
-                {perspective === 'pingu'
-                  ? lang === 'ko'
-                    ? '핑구 시선'
-                    : 'Pingu View'
-                  : lang === 'ko'
-                    ? '교동 시선'
-                    : 'Gyodong View'}
-              </span>
-              <span className="text-[#3182f6]">⇄</span>
-            </button>
+            <div className="bg-[#f2f4f6] p-0.5 rounded-xl flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => onSwitchPerspective('pingu')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                  perspective === 'pingu'
+                    ? 'bg-white text-[#0051ff] shadow-xs'
+                    : 'text-[#4e5968] hover:text-[#191f28]'
+                }`}
+              >
+                <CharacterAvatar character="pingu" size={15} />
+                <span>{lang === 'ko' ? '핑구(출퇴근·현실)' : 'Pingu (Practical)'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onSwitchPerspective('gyodong')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                  perspective === 'gyodong'
+                    ? 'bg-white text-[#0051ff] shadow-xs'
+                    : 'text-[#4e5968] hover:text-[#191f28]'
+                }`}
+              >
+                <CharacterAvatar character="gyodong" size={15} />
+                <span>{lang === 'ko' ? '교동(감성·산책)' : 'Gyodong (Vibe)'}</span>
+              </button>
+            </div>
           )}
           {onEditClick && (
             <button
               type="button"
               onClick={onEditClick}
-              className="text-[11px] text-[#8b95a1] hover:text-[#3182f6] flex items-center gap-0.5 cursor-pointer"
+              className="text-[11px] text-[#8b95a1] hover:text-[#0051ff] flex items-center gap-0.5 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[14px]">edit</span>
               <span>{lang === 'ko' ? '수정' : 'Edit'}</span>

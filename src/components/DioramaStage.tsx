@@ -507,7 +507,7 @@ export const DioramaStage: React.FC<DioramaStageProps> = ({
       slopeGroup.add(schoolGroup);
     }
 
-    // Hillside Stairs & Yellow Handrail (Pillar 5: 언덕/계단 지형)
+    // Hillside Stairs & Yellow Handrail (Pillar 5: 언덕/계단 지형 — placed on left flank so front plaza is 100% clear)
     if (hasStairs) {
       const stairMat = new THREE.MeshStandardMaterial({
         color: activeLayer === 'incline' ? 0xfda4af : 0xcbd5e1,
@@ -517,14 +517,14 @@ export const DioramaStage: React.FC<DioramaStageProps> = ({
         color: 0xfacc15,
         roughness: 0.35,
       });
-      for (let s = 0; s < 10; s++) {
-        const step = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.12, 0.85), stairMat);
-        step.position.set(-2.4 + s * 0.42, 0.48 + s * 0.02, 2.25);
+      for (let s = 0; s < 8; s++) {
+        const step = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.68), stairMat);
+        step.position.set(-3.75 + s * 0.26, 0.48 + s * 0.02, 1.85);
         step.castShadow = true;
         slopeGroup.add(step);
       }
-      const railBar = new THREE.Mesh(new THREE.BoxGeometry(4.1, 0.05, 0.05), railMat);
-      railBar.position.set(-0.5, 0.85, 2.62);
+      const railBar = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.05, 0.05), railMat);
+      railBar.position.set(-2.85, 0.85, 2.18);
       slopeGroup.add(railBar);
     }
 
@@ -616,7 +616,11 @@ export const DioramaStage: React.FC<DioramaStageProps> = ({
 
     buildingsToRender.forEach((b) => {
       const bx = (b.x / 12) * 3.8;
-      const bz = (b.z / 12) * 3.4;
+      let bz = (b.z / 12) * 3.4;
+      // Keep the front-center promenade completely open so Pingu & Gyodong are never occluded by buildings
+      if (Math.abs(bx) < 2.6 && bz > -0.75) {
+        bz = -1.65;
+      }
       const bw = Math.max(0.95, Math.min(1.65, b.width * 0.42));
       const bd = Math.max(0.85, Math.min(1.4, b.depth * 0.42));
       const bh =
@@ -825,15 +829,102 @@ export const DioramaStage: React.FC<DioramaStageProps> = ({
     }
     slopeGroup.add(noiseGroup);
 
-    // 3D Pingu & 3D Gyodong Characters Exploring the Complex
+    // 3D Pingu & 3D Gyodong Characters Exploring the Open Front Promenade (100% unobstructed in front of all buildings)
+    const makeCharacterBadgeSprite = (text: string, bgColor: string, borderColor: string) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 320;
+      canvas.height = 76;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = bgColor;
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.roundRect(8, 8, 304, 60, 30);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 25px -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 160, 39);
+      }
+      const tex = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(1.35, 0.32, 1);
+      sprite.renderOrder = 999;
+      return sprite;
+    };
+
+    // Dedicated character spotlight in the front plaza so Pingu & Gyodong are brightly illuminated
+    const charSpotLight = new THREE.PointLight(0xfffbeb, 2.4, 7.5);
+    charSpotLight.position.set(0, 2.4, 3.2);
+    slopeGroup.add(charSpotLight);
+
+    // Front Promenade Stage Deck at z = 2.65
+    const promenadeDeck = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.95, 2.05, 0.06, 36),
+      new THREE.MeshStandardMaterial({
+        color: 0xf8fafc,
+        roughness: 0.35,
+        metalness: 0.1,
+      })
+    );
+    promenadeDeck.scale.set(1.35, 1, 0.58);
+    promenadeDeck.position.set(0, 0.47, 2.62);
+    promenadeDeck.receiveShadow = true;
+    slopeGroup.add(promenadeDeck);
+
     const pinguChar = create3DPingu();
-    pinguChar.scale.setScalar(neighborhood.perspective === 'gyodong' ? 0.85 : 1.08);
-    pinguChar.position.set(-0.85, 0.48, 0.35);
+    const isPinguFocus = neighborhood.perspective !== 'gyodong';
+    pinguChar.scale.setScalar(isPinguFocus ? 1.65 : 1.42);
+    pinguChar.position.set(-0.68, 0.52, 2.68);
+    // Glowing blue pedestal ring under Pingu
+    const pinguPedestal = new THREE.Mesh(
+      new THREE.RingGeometry(0.26, 0.36, 28),
+      new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: isPinguFocus ? 0.95 : 0.6,
+      })
+    );
+    pinguPedestal.rotation.x = -Math.PI / 2;
+    pinguPedestal.position.y = 0.02;
+    pinguChar.add(pinguPedestal);
+    const pinguBadge = makeCharacterBadgeSprite(
+      lang === 'en' ? '🐧 Pingu (Commute)' : '🐧 핑구 (출퇴근·현실)',
+      isPinguFocus ? 'rgba(0, 81, 255, 0.94)' : 'rgba(15, 23, 42, 0.86)',
+      '#93c5fd'
+    );
+    pinguBadge.position.set(0, 0.96, 0);
+    pinguChar.add(pinguBadge);
     slopeGroup.add(pinguChar);
 
     const gyodongChar = create3DGyodong();
-    gyodongChar.scale.setScalar(neighborhood.perspective === 'gyodong' ? 1.08 : 0.85);
-    gyodongChar.position.set(-1.55, 0.48, 1.05);
+    gyodongChar.scale.setScalar(!isPinguFocus ? 1.65 : 1.42);
+    gyodongChar.position.set(0.68, 0.52, 2.68);
+    // Glowing amber pedestal ring under Gyodong
+    const gyodongPedestal = new THREE.Mesh(
+      new THREE.RingGeometry(0.26, 0.36, 28),
+      new THREE.MeshBasicMaterial({
+        color: 0xfbbf24,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: !isPinguFocus ? 0.95 : 0.6,
+      })
+    );
+    gyodongPedestal.rotation.x = -Math.PI / 2;
+    gyodongPedestal.position.y = 0.02;
+    gyodongChar.add(gyodongPedestal);
+    const gyodongBadge = makeCharacterBadgeSprite(
+      lang === 'en' ? '🐶 Gyodong (Vibe)' : '🐶 교동 (감성·산책)',
+      !isPinguFocus ? 'rgba(217, 119, 6, 0.94)' : 'rgba(15, 23, 42, 0.86)',
+      '#fde68a'
+    );
+    gyodongBadge.position.set(0, 0.96, 0);
+    gyodongChar.add(gyodongBadge);
     slopeGroup.add(gyodongChar);
 
     // Animation Loop
@@ -846,14 +937,15 @@ export const DioramaStage: React.FC<DioramaStageProps> = ({
 
       controls.update();
 
-      const walkX = Math.sin(t * 0.7) * 1.4;
-      pinguChar.position.x = walkX;
-      pinguChar.position.y = 0.48 + Math.abs(Math.sin(t * 4.5)) * 0.09;
-      pinguChar.rotation.y = Math.cos(t * 0.7) >= 0 ? Math.PI / 2 : -Math.PI / 2;
+      // Gentle stroll in the open front promenade (z = 2.68), facing toward the viewer camera
+      const sway = Math.sin(t * 0.9) * 0.45;
+      pinguChar.position.x = -0.72 + sway;
+      pinguChar.position.y = 0.52 + Math.abs(Math.sin(t * 4.2)) * 0.11;
+      pinguChar.rotation.y = 0.25 + Math.sin(t * 1.4) * 0.32;
 
-      gyodongChar.position.x = walkX - 0.78;
-      gyodongChar.position.y = 0.48 + Math.abs(Math.cos(t * 4.5)) * 0.08;
-      gyodongChar.rotation.y = Math.cos(t * 0.7) >= 0 ? Math.PI / 2 : -Math.PI / 2;
+      gyodongChar.position.x = 0.72 + sway;
+      gyodongChar.position.y = 0.52 + Math.abs(Math.cos(t * 4.2)) * 0.1;
+      gyodongChar.rotation.y = -0.2 + Math.cos(t * 1.4) * 0.32;
 
       cars.forEach((c) => {
         c.mesh.position.x += c.speed * c.dir;
@@ -888,7 +980,7 @@ export const DioramaStage: React.FC<DioramaStageProps> = ({
       controls.dispose();
       renderer.dispose();
     };
-  }, [neighborhood, activeLayer, timeMode, showPhotoRelief, primaryPhotoUrl]);
+  }, [neighborhood, activeLayer, timeMode, showPhotoRelief, primaryPhotoUrl, lang]);
 
   const layerItems: { id: SensoryLayerType; label: string; value: string }[] = [
     {
@@ -938,11 +1030,11 @@ export const DioramaStage: React.FC<DioramaStageProps> = ({
               <span className="font-bold text-amber-300">
                 {activeExplorer === 'gyodong'
                   ? lang === 'en'
-                    ? 'Gyodong’s 3D World'
-                    : '교동의 3D 단지 월드'
+                    ? 'Gyodong (Vibe & Walk) 3D World'
+                    : '교동(감성·산책)의 3D 월드'
                   : lang === 'en'
-                    ? 'Pingu’s 3D World'
-                    : '핑구의 3D 단지 월드'}
+                    ? 'Pingu (Commute & Practical) 3D World'
+                    : '핑구(출퇴근·현실)의 3D 월드'}
               </span>
               <span className="mx-1.5 text-white/30">|</span>
               <span className="text-white/90 font-bold">

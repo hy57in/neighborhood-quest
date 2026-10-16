@@ -23,33 +23,51 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleLang,
 }) => {
   return (
-    <header className="fixed top-0 w-full z-50 pt-safe bg-[#f7f9fb]/90 backdrop-blur-xl border-b border-[#edf0f3]/80">
-      <div className="max-w-md mx-auto h-14 px-4 flex items-center justify-between">
-        <button
-          type="button"
-          aria-label={showBackButton ? (lang === 'ko' ? '뒤로가기' : 'Back') : (lang === 'ko' ? '이전 탐색' : 'Explore')}
-          onClick={onBack}
-          className="w-10 h-10 rounded-full flex items-center justify-center text-[#191f28] hover:bg-[#f2f4f6] active:scale-95 transition-all focus:outline-none"
-        >
-          <span className="material-symbols-outlined text-[24px]">arrow_back</span>
-        </button>
+    <header className="fixed top-0 w-full z-50 pt-safe bg-white/80 backdrop-blur-xl border-b border-[#c2c6d8]/25 shadow-[0_8px_24px_rgba(19,28,38,0.04)]">
+      <div className="max-w-md mx-auto h-14 px-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            aria-label={
+              showBackButton
+                ? lang === 'ko'
+                  ? '뒤로가기'
+                  : 'Back'
+                : lang === 'ko'
+                  ? '이전 탐색'
+                  : 'Explore'
+            }
+            onClick={onBack}
+            className="w-9 h-9 rounded-full bg-[#edf4ff] hover:bg-[#dfe9f6] flex items-center justify-center text-[#131c26] active:scale-95 transition-all cursor-pointer shrink-0"
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              {showBackButton ? 'arrow_back_ios_new' : 'explore'}
+            </span>
+          </button>
 
-        <div className="flex flex-col items-center text-center px-2 flex-1 truncate">
-          <h1 className="text-[17px] font-bold text-[#191f28] tracking-tight truncate w-full">
-            {neighborhood.name}
-          </h1>
-          <span className="text-[11px] font-medium text-[#8b95a1] truncate">
-            {neighborhood.stationDistance} · {neighborhood.timeContext}
-          </span>
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#0051ff] animate-pulse shrink-0" />
+              <h1 className="text-[15px] font-extrabold text-[#131c26] tracking-tight truncate">
+                {lang === 'en' && neighborhood.nameEn ? neighborhood.nameEn : neighborhood.name}
+              </h1>
+            </div>
+            <span className="text-[10px] font-bold text-[#424656] truncate">
+              {lang === 'en' && neighborhood.stationDistanceEn
+                ? neighborhood.stationDistanceEn
+                : neighborhood.stationDistance}{' '}
+              · {lang === 'en' && neighborhood.timeContextEn ? neighborhood.timeContextEn : neighborhood.timeContext}
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5 shrink-0">
           {onToggleLang && (
             <button
               type="button"
               onClick={onToggleLang}
               aria-label="Language toggle"
-              className="h-7 px-2 rounded-full bg-[#f2f4f6] hover:bg-[#e5e8eb] text-[10px] font-extrabold text-[#4e5968] transition-colors"
+              className="h-8 px-2.5 rounded-full bg-[#edf4ff] hover:bg-[#dde1ff] text-[10px] font-extrabold text-[#003dc7] transition-colors cursor-pointer"
             >
               {lang === 'ko' ? 'EN' : 'KO'}
             </button>
@@ -58,20 +76,31 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             aria-label={lang === 'ko' ? '공유' : 'Share'}
             onClick={onShare}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#191f28] hover:bg-[#f2f4f6] active:scale-95 transition-all focus:outline-none"
+            className="w-9 h-9 rounded-full bg-[#edf4ff] hover:bg-[#dfe9f6] flex items-center justify-center text-[#131c26] active:scale-95 transition-all cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[20px]">share</span>
+            <span className="material-symbols-outlined text-[18px]">ios_share</span>
           </button>
           <button
             type="button"
-            aria-label={isBookmarked ? (lang === 'ko' ? '보관됨' : 'Saved') : (lang === 'ko' ? '보관하기' : 'Save')}
+            aria-label={
+              isBookmarked
+                ? lang === 'ko'
+                  ? '보관됨'
+                  : 'Saved'
+                : lang === 'ko'
+                  ? '보관하기'
+                  : 'Save'
+            }
             onClick={onToggleBookmark}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#191f28] hover:bg-[#f2f4f6] active:scale-95 transition-all focus:outline-none"
+            className={`w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-all cursor-pointer ${
+              isBookmarked
+                ? 'bg-[#dde1ff] text-[#003dc7]'
+                : 'bg-[#edf4ff] text-[#131c26] hover:bg-[#dfe9f6]'
+            }`}
           >
             <span
-              className={`material-symbols-outlined text-[20px] transition-colors ${
-                isBookmarked ? 'text-[#3182f6] fill-1' : 'text-[#191f28]'
-              }`}
+              className="material-symbols-outlined text-[19px]"
+              style={isBookmarked ? { fontVariationSettings: "'FILL' 1" } : undefined}
             >
               {isBookmarked ? 'bookmark' : 'bookmark_border'}
             </span>

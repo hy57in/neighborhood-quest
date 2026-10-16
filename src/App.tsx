@@ -63,6 +63,7 @@ export function App() {
   const [isGenerating3D, setIsGenerating3D] = useState<boolean>(false);
   const [generationStatus, setGenerationStatus] = useState<string>('');
   const [shareToast, setShareToast] = useState<string | null>(null);
+  const [activeEvidencePin, setActiveEvidencePin] = useState<'voice' | 'stone' | 'quiet' | 'school'>('voice');
   const quickPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeNeighborhood =
@@ -254,8 +255,44 @@ export function App() {
     reader.readAsDataURL(file);
   };
 
+  const evidencePinMap = {
+    voice: {
+      badge: '🎤 0:14 가파른 오르막',
+      speaker: '🐧 핑구 (출퇴근·현실)',
+      title: `음성메모 #01 · 경사 ${activeNeighborhood.inclineAngleDeg}° 보행 체감`,
+      desc: activeNeighborhood.quote,
+      tag: `경사도 ${activeNeighborhood.inclineAngleDeg}° (${activeNeighborhood.inclinePercent}%)`,
+      layer: 'incline' as SensoryLayerType,
+    },
+    stone: {
+      badge: '📷 석재 마감/외벽',
+      speaker: '📸 멀티모달 비전 3D 매핑',
+      title: `${activeNeighborhood.photos?.[0]?.caption || '현장 스냅샷'} → 3D 릴리프 변환`,
+      desc: '첨부한 현장 사진의 건물 스카이라인, 외벽 색감, 경사 지형을 추출하여 3D 디오라마 블록으로 재구성했습니다.',
+      tag: `사진 ${activeNeighborhood.photos.length}장 동기화`,
+      layer: 'all' as SensoryLayerType,
+    },
+    quiet: {
+      badge: '🔉 저소음 힐링',
+      speaker: '🐶 교동 (감성·산책)',
+      title: `골목 정숙도 ${activeNeighborhood.noiseDb}dB · 아늑함 ${activeNeighborhood.cozinessPercent}%`,
+      desc: `차량 소음이 차단되는 단지 내부 산책로(${activeNeighborhood.noiseDb}dB)와 도보 ${activeNeighborhood.greenWalkMinutes}분 숲세권 녹지가 어우러진 힐링 구간입니다.`,
+      tag: `소음 ${activeNeighborhood.noiseDb}dB · 산책 만족 ${activeNeighborhood.cozinessPercent}%`,
+      layer: 'noise' as SensoryLayerType,
+    },
+    school: {
+      badge: '🏫 초품아 안심통학',
+      speaker: '🏛️ 환금성 6대 황금조건',
+      title: `${activeNeighborhood.liquidity?.school.labelKo || '우수학군'} · 환금성 ${activeNeighborhood.liquidity?.grade || 'A'}등급`,
+      desc: `${activeNeighborhood.liquidity?.school.detailKo || '안전한 통학 동선'} 입지로 실거주 학부모 수요와 매도 시 하방 경직성을 동시에 확보합니다.`,
+      tag: `학군 ${activeNeighborhood.liquidity?.school.score || 90}점 · 종합 ${activeNeighborhood.liquidity?.totalScore || 88}점`,
+      layer: 'sunlight' as SensoryLayerType,
+    },
+  };
+  const currentPin = evidencePinMap[activeEvidencePin];
+
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191f28] flex flex-col">
+    <div className="min-h-screen bg-[#f8f9ff] text-[#131b2e] flex flex-col">
       {/* Hidden input for quick photo-to-3D upload directly on Diorama tab */}
       <input
         ref={quickPhotoInputRef}
@@ -303,6 +340,7 @@ export function App() {
               setRecordSubTab('capture');
               setActiveTab('record');
             }}
+            onOpenCompare={() => setActiveTab('compare')}
             onAddNewPlaceNeighborhood={(newPlace, goToRecord) => {
               setNeighborhoods((prev) => {
                 const exists = prev.some((n) => n.id === newPlace.id);
@@ -327,6 +365,27 @@ export function App() {
         {/* TAB 2: DIORAMA (디오라마 — 첨부 이미지 기반 3D 입체 복원 + 환금성 6대 입지 + 감각기억) */}
         {activeTab === 'diorama' && (
           <div className="flex flex-col gap-3.5">
+            {/* Stitch Top Spatial Context Card (3D DIGITAL TWIN VERIFIED) */}
+            <div className="bg-white/95 backdrop-blur-xl rounded-[24px] p-4 border border-[#e3e8f2] shadow-[0_8px_24px_rgba(19,27,46,0.05)]">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#edf4ff] text-[#003dc7] text-[10px] font-black uppercase tracking-wider border border-blue-200/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#0052ff] animate-ping" />
+                  3D DIGITAL TWIN VERIFIED
+                </span>
+                {activeNeighborhood.liquidity && (
+                  <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-[#131b2e] text-amber-300">
+                    환금성 {activeNeighborhood.liquidity.grade} ({activeNeighborhood.liquidity.totalScore}점)
+                  </span>
+                )}
+              </div>
+              <h2 className="text-[17px] font-black text-[#131b2e] tracking-tight">
+                {lang === 'en' && activeNeighborhood.nameEn ? activeNeighborhood.nameEn : activeNeighborhood.name}
+              </h2>
+              <p className="text-[11px] font-bold text-[#6e7991] mt-0.5">
+                {activeNeighborhood.subName} · {activeNeighborhood.stationDistance} · 경사 {activeNeighborhood.inclineAngleDeg}°
+              </p>
+            </div>
+
             {/* Neighborhood Quick Switcher Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
               {neighborhoods.map((item) => {
@@ -338,8 +397,8 @@ export function App() {
                     onClick={() => setSelectedId(item.id)}
                     className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold flex items-center gap-1.5 whitespace-nowrap transition-all cursor-pointer border ${
                       isSelected
-                        ? 'bg-[#191f28] text-white border-[#191f28] shadow-xs'
-                        : 'bg-white text-[#4e5968] border-[#edf0f3] hover:bg-slate-50'
+                        ? 'bg-[#131b2e] text-white border-[#131b2e] shadow-xs'
+                        : 'bg-white text-[#3e485f] border-[#e3e8f2] hover:bg-[#edf4ff]'
                     }`}
                   >
                     <CharacterAvatar
@@ -354,7 +413,7 @@ export function App() {
                     {item.liquidity && (
                       <span
                         className={`text-[9px] px-1.5 py-0.2 rounded-full ${
-                          isSelected ? 'bg-indigo-500 text-white' : 'bg-slate-100 text-slate-600'
+                          isSelected ? 'bg-[#0052ff] text-white' : 'bg-slate-100 text-slate-600'
                         }`}
                       >
                         {item.liquidity.grade}
@@ -372,6 +431,122 @@ export function App() {
               onSelectLayer={setActiveLayer}
               lang={lang}
             />
+
+            {/* Stitch Interactive Evidence Pins + Popover Card */}
+            <section className="bg-white rounded-[24px] p-4 border border-[#e3e8f2] shadow-[0_8px_24px_rgba(19,27,46,0.04)] flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-black text-[#131b2e] flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#0052ff]" />
+                  {lang === 'ko' ? '현장 멀티모달 증거 핀 (클릭하여 검증)' : 'Multimodal Evidence Pins'}
+                </span>
+                <span className="text-[10px] font-extrabold text-[#003dc7] bg-[#edf4ff] px-2 py-0.5 rounded-full">
+                  Evidence Linked
+                </span>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {(['voice', 'stone', 'quiet', 'school'] as const).map((pinKey) => {
+                  const pin = evidencePinMap[pinKey];
+                  const active = activeEvidencePin === pinKey;
+                  return (
+                    <button
+                      key={pinKey}
+                      type="button"
+                      onClick={() => {
+                        setActiveEvidencePin(pinKey);
+                        setActiveLayer(pin.layer);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer ${
+                        active
+                          ? 'bg-[#003dc7] text-white shadow-sm ring-2 ring-blue-200'
+                          : 'bg-[#f8f9ff] text-[#3e485f] border border-[#e3e8f2] hover:bg-[#edf4ff]'
+                      }`}
+                    >
+                      {pin.badge}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="bg-gradient-to-br from-[#f8f9ff] via-white to-[#edf4ff]/60 rounded-2xl p-3.5 border border-blue-200/80">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-[10px] font-black text-[#003dc7]">{currentPin.speaker}</span>
+                  <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-white text-[#3e485f] border border-slate-200">
+                    {currentPin.tag}
+                  </span>
+                </div>
+                <h4 className="text-[13px] font-black text-[#131b2e] mb-1">{currentPin.title}</h4>
+                <p className="text-[11px] text-[#3e485f] leading-relaxed font-medium">{currentPin.desc}</p>
+              </div>
+            </section>
+
+            {/* Stitch 체감 공간 지수 (Spatial Feel Index · 신뢰도 98.4%) */}
+            <section className="bg-white rounded-[24px] p-4 border border-[#e3e8f2] shadow-[0_8px_24px_rgba(19,27,46,0.04)] flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-[14px] font-black text-[#131b2e]">
+                    {lang === 'ko' ? '체감 공간 지수' : 'Perceived Spatial Index'}
+                  </h3>
+                  <p className="text-[10px] text-[#6e7991] font-bold">
+                    {lang === 'ko'
+                      ? 'Gemini 4 Argon 멀티모달 공간·감성 디코딩'
+                      : 'Gemini 4 Argon Spatial & Sensory Decoding'}
+                  </p>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black">
+                  {lang === 'ko' ? '신뢰도 98.4%' : 'Confidence 98.4%'}
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                <div>
+                  <div className="flex items-center justify-between text-[11px] mb-1">
+                    <span className="font-extrabold text-[#131b2e]">
+                      ⛰️ 언덕 피로도 (경사 {activeNeighborhood.inclineAngleDeg}°)
+                    </span>
+                    <span className="font-black text-[#e03e52]">{activeNeighborhood.inclinePercent}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-400 to-[#e03e52] rounded-full transition-all duration-500"
+                      style={{ width: `${activeNeighborhood.inclinePercent}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-[11px] mb-1">
+                    <span className="font-extrabold text-[#131b2e]">
+                      🌿 단지 아늑함 및 정숙도 ({activeNeighborhood.noiseDb}dB)
+                    </span>
+                    <span className="font-black text-[#003dc7]">{activeNeighborhood.cozinessPercent}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#003dc7] to-[#3b82f6] rounded-full transition-all duration-500"
+                      style={{ width: `${activeNeighborhood.cozinessPercent}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-[11px] mb-1">
+                    <span className="font-extrabold text-[#131b2e]">
+                      ☀️ 숲세권 산책 만족도 (도보 {activeNeighborhood.greenWalkMinutes}분)
+                    </span>
+                    <span className="font-black text-[#732ee4]">
+                      {Math.max(68, 100 - activeNeighborhood.greenWalkMinutes * 5)}%
+                    </span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#732ee4] to-[#a855f7] rounded-full transition-all duration-500"
+                      style={{ width: `${Math.max(68, 100 - activeNeighborhood.greenWalkMinutes * 5)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
 
             {/* Direct Photo-to-3D Upload & Gemini 4 Argon Synthesis Bar */}
             <div className="bg-slate-900 text-white rounded-2xl p-3.5 border border-slate-800 flex items-center justify-between gap-2.5 shadow-sm">
@@ -533,23 +708,7 @@ export function App() {
           </div>
         )}
 
-        {/* TAB 3: COMPARE (동네비교 — 환금성 6대 기준 × 내가 고른 감각기억 1:1 대조) */}
-        {activeTab === 'compare' && (
-          <CompareView
-            neighborhoods={neighborhoods}
-            compareIds={compareIds}
-            onToggleCompare={handleToggleCompare}
-            onSelectNeighborhood={(id) => {
-              setSelectedId(id);
-              setActiveTab('diorama');
-            }}
-            selectedSensoryPriorities={selectedSensoryPriorities}
-            onToggleSensoryPriority={handleToggleSensoryPriority}
-            lang={lang}
-          />
-        )}
-
-        {/* TAB 4: RECORD & BOOKMARKS (보관함 — 새 현장 기록/첨부 이미지 3D 변환 & 보관된 동네 목록) */}
+        {/* TAB 3: RECORD & BOOKMARKS (퀵기록 & 보관함 — 새 현장 기록/첨부 이미지 3D 변환 & 보관된 동네 목록) */}
         {(activeTab === 'record' || activeTab === 'bookmarks') && (
           <div className="flex flex-col gap-3">
             {/* Sub-tab switcher inside the 4th menu */}

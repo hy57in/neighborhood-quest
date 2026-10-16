@@ -319,10 +319,28 @@ export const INITIAL_NEIGHBORHOODS: NeighborhoodData[] = [
     timeContext: '골든아워',
     timeContextEn: 'Golden Hour',
     quote:
-      '“3,885세대 초대형 단지라 조경이 공원처럼 잘 되어 있고, 한성중·고와 아현초가 바로 붙어 있어요. 단지 내부 엘리베이터로 경사를 보완해 보행도 쾌적해요!”',
+      '“3,885세대 초대형 1군 대단지에 2호선·5호선 더블 역세권(도보 5분), 아현초·한성중고 학군까지! 단지 엘리베이터로 경사도 해결돼서 출퇴근과 환금성(S등급) 모두 최고예요.”',
     quoteEn:
-      '“With 3,885 households, the complex landscaping feels like a botanical park, with elementary & middle schools right next door and outdoor elevators smoothing the hill.”',
+      '“3,885 households Tier-1 brand, 5-min walk to Line 2 & Line 5, elementary & middle schools right next door, and outdoor elevators solving the slope—top tier for both commute and liquidity!”',
     quoteAuthor: '핑구',
+    perspectiveQuotes: {
+      pingu: {
+        author: '핑구 (출퇴근·현실 중심)',
+        authorEn: 'Pingu (Commute & Practical)',
+        quote:
+          '“3,885세대 초대형 1군 대단지에 2·5호선 도보 5분 더블 역세권! 광화문·여의도 출퇴근이 압도적으로 편하고 대단지 거래량이 많아 환금성 1순위예요.”',
+        quoteEn:
+          '“3,885-unit Tier-1 complex just 5 mins from Line 2 & 5! Effortless commute to Gwanghwamun/Yeouido and unbeaten resale liquidity.”',
+      },
+      gyodong: {
+        author: '교동 (감성·산책 중심)',
+        authorEn: 'Gyodong (Vibe & Walk)',
+        quote:
+          '“차 없는 단지 안 왕벚나무 산책로를 걸으면 수목원에 온 기분이에요. 저녁 노을빛 아래 조용한 보행로(31dB)를 산책하는 시간이 참 따뜻해요.”',
+        quoteEn:
+          '“Walking along the car-free cherry blossom trails inside feels like a botanical garden. Quiet evening strolls (31dB) under warm sunset lights.”',
+      },
+    },
     dioramaImageUrl: createDetailedSceneDataUrl({
       skyTop: '#fde68a',
       skyBottom: '#fca5a5',
@@ -413,10 +431,28 @@ export const INITIAL_NEIGHBORHOODS: NeighborhoodData[] = [
     timeContext: '청량한 오후',
     timeContextEn: 'Crisp Afternoon',
     quote:
-      '“역에서 단지까지 완전 평지라 걷기 너무 편하고, 서울숲 대공원과 붉은 벽돌 로스터리 카페들이 바로 집 앞 정원처럼 이어져요.”',
+      '“서울숲 대공원 플라타너스 그늘과 붉은 벽돌 로스터리 골목이 집 앞 정원처럼 이어져서, 주말마다 커피 한 잔 들고 산책하기 정말 설레는 동네예요.”',
     quoteEn:
-      '“Completely flat walk from the station, with Seoul Forest Park and red-brick roastery cafes right outside like a front garden.”',
+      '“Seoul Forest Park and red-brick roastery cafes connect right outside like a front garden—perfect for inspiring weekend coffee strolls.”',
     quoteAuthor: '교동',
+    perspectiveQuotes: {
+      pingu: {
+        author: '핑구 (출퇴근·현실 중심)',
+        authorEn: 'Pingu (Commute & Practical)',
+        quote:
+          '“2호선 뚝섬역·수인분당선 서울숲역 도보 4분 초역세권에 경사 2° 완전 평지! 강남·도심 출퇴근이 빠르고 하이엔드 신축 수요가 탄탄해요.”',
+        quoteEn:
+          '“4-min walk to Line 2 & Suin-Bundang Line on 2° flat ground! Fast Gangnam commute and rock-solid high-end demand.”',
+      },
+      gyodong: {
+        author: '교동 (감성·산책 중심)',
+        authorEn: 'Gyodong (Vibe & Walk)',
+        quote:
+          '“서울숲 플라타너스 숲길과 붉은 벽돌 로스터리 커피 향이 어우러져서, 퇴근 후 저녁 산책만으로도 마음이 리프레시되는 감성 동네예요.”',
+        quoteEn:
+          '“Platanus tree trails in Seoul Forest and warm red-brick roastery aroma make every evening walk feel restorative.”',
+      },
+    },
     dioramaImageUrl: createDetailedSceneDataUrl({
       skyTop: '#bae6fd',
       skyBottom: '#fef08a',
@@ -509,10 +545,28 @@ export const INITIAL_NEIGHBORHOODS: NeighborhoodData[] = [
     timeContext: '골든아워',
     timeContextEn: 'Golden Hour',
     quote:
-      '“끝이 안 보일 만큼 넓은 완전 평지 대단지 안에 초·중·고가 다 들어있고, 조금만 걸으면 한강공원과 석촌호수 벚꽃길이 나와요.”',
+      '“5,678세대 완전 평지 대단지에 2·9호선 도보 3분 초역세권, 단지 내 초·중·고까지! 환금성 6대 기준 만점에 가까운 송파 대장 입지예요.”',
     quoteEn:
-      '“An expansive, completely flat mega-complex with elementary, middle, and high schools right inside, plus Han River Park and Seokchon Lake minutes away.”',
+      '“5,678-unit flat mega-complex, 3-min walk to Lines 2 & 9, and schools inside the complex—near-perfect scores across all 6 liquidity pillars.”',
     quoteAuthor: '핑구',
+    perspectiveQuotes: {
+      pingu: {
+        author: '핑구 (출퇴근·현실 중심)',
+        authorEn: 'Pingu (Commute & Practical)',
+        quote:
+          '“2호선·9호선 급행 도보 3분에 경사 1° 완전 평지, 5,678세대에 초·중·고 초품아까지! 출퇴근·학군·환금성 6대 지표 모두 만점급이에요.”',
+        quoteEn:
+          '“3-min walk to Line 2 & 9 Express, 1° flat terrain, 5,678 units, and in-complex schools—a 10/10 across commute, schools, and liquidity.”',
+      },
+      gyodong: {
+        author: '교동 (감성·산책 중심)',
+        authorEn: 'Gyodong (Vibe & Walk)',
+        quote:
+          '“단지 안 숲길이 끝없이 이어지고 조금만 걸으면 석촌호수 벚꽃길과 한강공원이 나와서 사계절 산책이 영화 같은 곳이에요.”',
+        quoteEn:
+          '“Endless green walkways inside the complex lead straight to Seokchon Lake cherry blossoms and Han River Park.”',
+      },
+    },
     dioramaImageUrl: createDetailedSceneDataUrl({
       skyTop: '#c7d2fe',
       skyBottom: '#fbcfe8',
@@ -605,10 +659,28 @@ export const INITIAL_NEIGHBORHOODS: NeighborhoodData[] = [
     timeContext: '블루아워',
     timeContextEn: 'Blue Hour',
     quote:
-      '“언덕 지형이지만 수직 엘리베이터가 잘 되어 있고, 달맞이봉 공원과 한강 노을 조망이 동시에 펼쳐지는 매력적인 단지예요.”',
+      '“달맞이봉 공원에서 불어오는 선선한 강바람과 보랏빛 블루아워 한강 노을이 매일 저녁 작품을 만들어주는 감성 가득한 동네예요.”',
     quoteEn:
-      '“Though built on a hill, outdoor elevators make walking easy, with Dalbongi Park and Han River sunset views unfolding together.”',
+      '“Cool river breezes from Dalbongi Park and purple-gold Han River sunsets turn every evening walk into a painting.”',
     quoteAuthor: '교동',
+    perspectiveQuotes: {
+      pingu: {
+        author: '핑구 (출퇴근·현실 중심)',
+        authorEn: 'Pingu (Commute & Practical)',
+        quote:
+          '“3호선 옥수역에서 압구정까지 딱 1정거장! 1,976세대 현대건설 1군 브랜드 대단지라 강남·도심 출퇴근과 환금성이 모두 확실해요.”',
+        quoteEn:
+          '“Just 1 stop from Oksu Stn (Line 3) to Apgujeong! 1,976-unit Hyundai Tier-1 complex with fast Gangnam/CBD access and strong liquidity.”',
+      },
+      gyodong: {
+        author: '교동 (감성·산책 중심)',
+        authorEn: 'Gyodong (Vibe & Walk)',
+        quote:
+          '“달맞이봉 공원 산책로와 탁 트인 한강 노을 조망이 동시에 펼쳐져서, 저녁마다 강바람 맞으며 걷기 너무 행복해요.”',
+        quoteEn:
+          '“Dalbongi Park trails and panoramic Han River sunset views unfold together for unforgettable evening walks.”',
+      },
+    },
     dioramaImageUrl: createDetailedSceneDataUrl({
       skyTop: '#818cf8',
       skyBottom: '#fda4af',
@@ -701,10 +773,28 @@ export const INITIAL_NEIGHBORHOODS: NeighborhoodData[] = [
     timeContext: '골든아워',
     timeContextEn: 'Golden Hour',
     quote:
-      '“역에서 올라오는 언덕은 꽤 가팔랐지만, 3,544세대 대단지 뒤로 까치산 공원 산책로가 바로 이어지고 저녁엔 정말 고요하고 아늑해요.”',
+      '“3,544세대 매머드급 대단지에 구암초·중·고가 바로 붙어 있고 2·7호선으로 강남·여의도 출퇴근이 20분대예요. 다만 18° 오르막이라 마을버스 환승 동선을 꼭 체크해야 해요!”',
     quoteEn:
-      '“The hill from the station was steep, but Kkachisan Park trails connect right behind the 3,544-household complex with serene evening calm.”',
+      '“3,544-unit mega-complex next to schools with 20-min Line 2/7 access to Gangnam/Yeouido—just factor in the 18° hill and shuttle bus transfer!”',
     quoteAuthor: '핑구',
+    perspectiveQuotes: {
+      pingu: {
+        author: '핑구 (출퇴근·현실 중심)',
+        authorEn: 'Pingu (Commute & Practical)',
+        quote:
+          '“3,544세대 대단지라 거래 환금성이 탄탄하고 강남·여의도 출퇴근이 빨라요. 다만 역에서 도보 14분 오르막(18°)이라 출퇴근 마을버스 배차를 고려해야 해요.”',
+        quoteEn:
+          '“3,544 units ensure steady resale volume and fast Gangnam/Yeouido commutes, though the 14-min 18° uphill walk means using the shuttle bus.”',
+      },
+      gyodong: {
+        author: '교동 (감성·산책 중심)',
+        authorEn: 'Gyodong (Vibe & Walk)',
+        quote:
+          '“언덕 위라 오히려 차 소리가 전혀 안 들리고(28dB), 단지 바로 뒤 까치산 공원 숲길과 주황빛 노을이 하루의 피로를 싹 씻어줘요.”',
+        quoteEn:
+          '“Perched on the hill, traffic noise vanishes (28dB), and Kkachisan Park trails plus warm sunset skies melt away the day’s stress.”',
+      },
+    },
     dioramaImageUrl: createDetailedSceneDataUrl({
       skyTop: '#fde68a',
       skyBottom: '#fca5a5',

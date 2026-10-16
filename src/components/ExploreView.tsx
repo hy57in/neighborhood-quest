@@ -20,6 +20,7 @@ interface ExploreViewProps {
   onConfirmLocationAndRecord: (neighborhoodId: string) => void;
   onAddNewPlaceNeighborhood: (newPlace: NeighborhoodData, goToRecord?: boolean) => void;
   onToggleCompare: (id: string) => void;
+  onOpenCompare?: () => void;
   lang?: Lang;
 }
 
@@ -142,6 +143,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   onConfirmLocationAndRecord,
   onAddNewPlaceNeighborhood,
   onToggleCompare,
+  onOpenCompare,
   lang = 'ko',
 }) => {
   const selectedNeighborhood =
@@ -158,13 +160,15 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   >([]);
   const [locationVerifiedBanner, setLocationVerifiedBanner] = useState<string | null>(null);
   const [pendingCandidate, setPendingCandidate] = useState<PlaceCandidate | null>(null);
+  const [mapViewMode, setMapViewMode] = useState<'google-pins' | 'google-embed'>('google-pins');
+  const [isPlayingFootprintVoice, setIsPlayingFootprintVoice] = useState<boolean>(false);
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const placeInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Initialize interactive Leaflet map
+  // Initialize interactive Google Maps tile + multi-pin map (zero API key required)
   useEffect(() => {
     const container = mapContainerRef.current;
     if (!container || mapInstanceRef.current) return;
@@ -176,9 +180,10 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
       zoomControl: true,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-      maxZoom: 19,
+    // Google Maps standard Korean road & subway tile layer (works without API key)
+    L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=ko', {
+      attribution: '&copy; Google Maps',
+      maxZoom: 20,
     }).addTo(map);
 
     const markersLayer = L.layerGroup().addTo(map);
@@ -577,52 +582,139 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 1. Interactive Leaflet Map + Location Verification Card */}
+      {/* 1. Interactive Google Maps + Location Verification Card */}
       <section className="bg-white rounded-3xl border border-[#edf0f3] shadow-[0_4px_20px_rgba(0,0,0,0.04)] overflow-hidden">
         {/* Top Map Header */}
-        <div className="px-4 py-3 border-b border-[#edf0f3] flex items-center justify-between gap-2">
+        <div className="px-4 py-3 border-b border-[#edf0f3] flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-[#0051ff] animate-pulse" />
               <span className="text-[11px] font-extrabold text-[#0051ff] uppercase tracking-wider">
-                {lang === 'ko' ? 'STEP 1 · 지도 탐색 & 위치 확인' : 'STEP 1 · MAP EXPLORE & VERIFY'}
+                {lang === 'ko' ? 'STEP 1 · GOOGLE MAPS 탐색 & 위치 확인' : 'STEP 1 · GOOGLE MAPS EXPLORE & VERIFY'}
               </span>
             </div>
             <h2 className="text-[15px] font-extrabold text-[#191f28] mt-0.5">
               {lang === 'ko'
-                ? '지도에서 동네를 고르거나 현재 위치를 확인하세요'
-                : 'Pick a neighborhood on the map or verify your location'}
+                ? 'Google 지도에서 동네를 고르거나 현재 위치를 확인하세요'
+                : 'Pick a neighborhood on Google Maps or verify your location'}
             </h2>
           </div>
 
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={handleDetectCurrentGps}
-            disabled={isFetchingGps}
-            className="!rounded-xl !text-[11px] !font-bold !border-[#0051ff]/30 !text-[#0051ff] hover:!bg-[#e8f3ff] shrink-0"
-          >
-            <span className="material-symbols-outlined text-[15px]">my_location</span>
-            <span>
-              {isFetchingGps
-                ? lang === 'ko'
-                  ? '위치 확인 중...'
-                  : 'Locating...'
-                : lang === 'ko'
-                  ? '내 현재위치 가져오기'
-                  : 'Use My GPS'}
-            </span>
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <div className="bg-[#f2f4f6] p-0.5 rounded-xl flex items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setMapViewMode('google-pins');
+                  setTimeout(() => mapInstanceRef.current?.invalidateSize(), 60);
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  mapViewMode === 'google-pins'
+                    ? 'bg-white text-[#0051ff] shadow-xs'
+                    : 'text-[#4e5968] hover:text-[#191f28]'
+                }`}
+              >
+                {lang === 'ko' ? '🗺️ 멀티핀 지도' : '🗺️ Multi-Pin'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapViewMode('google-embed')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  mapViewMode === 'google-embed'
+                    ? 'bg-white text-[#0051ff] shadow-xs'
+                    : 'text-[#4e5968] hover:text-[#191f28]'
+                }`}
+              >
+                {lang === 'ko' ? '📍 Google Maps 상세' : '📍 Google Embed'}
+              </button>
+            </div>
+
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={handleDetectCurrentGps}
+              disabled={isFetchingGps}
+              className="!rounded-xl !text-[11px] !font-bold !border-[#0051ff]/30 !text-[#0051ff] hover:!bg-[#e8f3ff] shrink-0"
+            >
+              <span className="material-symbols-outlined text-[15px]">my_location</span>
+              <span>
+                {isFetchingGps
+                  ? lang === 'ko'
+                    ? '위치 확인 중...'
+                    : 'Locating...'
+                  : lang === 'ko'
+                    ? '내 현재위치'
+                    : 'Use My GPS'}
+              </span>
+            </Button>
+          </div>
         </div>
 
-        {/* Leaflet Map Container */}
-        <div className="relative w-full h-[230px] bg-slate-100">
-          <div ref={mapContainerRef} className="w-full h-full z-0" />
+        {/* Google Maps Container (Multi-Pin Interactive OR Official Google Maps Embed) */}
+        <div className="relative w-full h-[250px] bg-slate-100">
+          <div
+            ref={mapContainerRef}
+            className={`w-full h-full z-0 ${mapViewMode === 'google-pins' ? 'block' : 'hidden'}`}
+          />
+          {mapViewMode === 'google-embed' && (
+            <iframe
+              title="Google Maps Neighborhood View"
+              className="w-full h-full border-0"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(
+                pendingCandidate
+                  ? `${pendingCandidate.lat},${pendingCandidate.lng}`
+                  : selectedNeighborhood?.coordinates
+                    ? `${selectedNeighborhood.coordinates.lat},${selectedNeighborhood.coordinates.lng} (${selectedNeighborhood.name})`
+                    : selectedNeighborhood?.name || '서울'
+              )}&t=m&z=15&ie=UTF8&iwloc=&output=embed&hl=${lang}`}
+            />
+          )}
           <div className="pointer-events-none absolute bottom-2 left-2 z-[400] bg-slate-900/80 backdrop-blur-xs text-white px-2.5 py-1 rounded-lg text-[10px] font-semibold">
-            {lang === 'ko'
-              ? '💡 지도의 핀을 누르거나 원하는 위치를 직접 터치해보세요'
-              : '💡 Tap any pin or click anywhere on the map'}
+            {mapViewMode === 'google-pins'
+              ? lang === 'ko'
+                ? '💡 Google Maps 위에서 핀을 누르거나 원하는 위치를 직접 클릭해보세요'
+                : '💡 Tap any pin or click anywhere on Google Maps'
+              : lang === 'ko'
+                ? '💡 Google Maps 공식 상세 지도 · 아래 동네 칩을 누르면 즉시 이동합니다'
+                : '💡 Official Google Maps View · Tap any chip below to jump'}
           </div>
+        </div>
+
+        {/* Quick Neighborhood Pin Selector Bar right below the map */}
+        <div className="px-3.5 py-2 bg-white border-t border-[#edf0f3] flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <span className="text-[10px] font-extrabold text-[#8b95a1] shrink-0 mr-1">
+            {lang === 'ko' ? '📌 지도 핀 바로가기:' : '📌 Quick Pins:'}
+          </span>
+          {neighborhoods.map((n) => {
+            const active = n.id === selectedId && !pendingCandidate;
+            return (
+              <button
+                key={n.id}
+                type="button"
+                onClick={() => {
+                  setPendingCandidate(null);
+                  setLocationVerifiedBanner(null);
+                  onSelectNeighborhood(n.id);
+                }}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap flex items-center gap-1 transition-all cursor-pointer border ${
+                  active
+                    ? 'bg-[#0051ff] text-white border-[#0051ff] shadow-xs'
+                    : 'bg-[#f7f9fb] text-[#191f28] border-[#e5e8eb] hover:bg-[#e8f3ff]'
+                }`}
+              >
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[9px] font-extrabold ${
+                    active ? 'bg-white text-[#0051ff]' : 'bg-[#e8f3ff] text-[#0051ff]'
+                  }`}
+                >
+                  {n.liquidity?.grade || 'A'}
+                </span>
+                <span>{lang === 'en' && n.nameEn ? n.nameEn : n.name}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Location Confirmation Box ("여기가 맞는지 확인. 아니라면 장소 검색해서 입력") */}
@@ -818,6 +910,184 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
           )}
         </div>
       </section>
+
+      {/* 1.5. Stitch Neo-Tactile Glass "최근 발자국" (Recent Footprint Focus Card) */}
+      {selectedNeighborhood && (
+        <section className="rounded-3xl bg-white/90 backdrop-blur-2xl p-4 shadow-[0_12px_32px_rgba(19,28,38,0.08)] border border-[#c2c6d8]/35 flex flex-col gap-3">
+          {/* Drag Handle & Quick Record Pill */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#dde1ff] text-[#003dc7] text-[10px] font-extrabold uppercase tracking-wider">
+                {lang === 'ko' ? '최근 발자국 · FOCUS' : 'RECENT FOOTPRINT'}
+              </span>
+              <span className="text-[11px] font-bold text-[#424656]">
+                {selectedNeighborhood.geminiVerifiedAt
+                  ? `AI 검증 ${selectedNeighborhood.geminiVerifiedAt}`
+                  : lang === 'ko'
+                    ? '실측 완료'
+                    : 'Field Verified'}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onConfirmLocationAndRecord(selectedNeighborhood.id)}
+              className="flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-br from-[#0051ff] to-[#003dc7] text-white text-[11px] font-extrabold shadow-[0_6px_16px_rgba(0,81,255,0.28)] active:scale-95 transition-all cursor-pointer"
+            >
+              <span
+                className="material-symbols-outlined text-[14px]"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                add_location_alt
+              </span>
+              <span>{lang === 'ko' ? '+ 현장 즉시 기록 시작' : '+ Quick Capture'}</span>
+            </button>
+          </div>
+
+          {/* Header Row */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="text-[16px] font-extrabold text-[#131c26] tracking-tight truncate">
+                {lang === 'en' && selectedNeighborhood.nameEn
+                  ? selectedNeighborhood.nameEn
+                  : selectedNeighborhood.name}
+              </h3>
+              <p className="text-[11px] font-medium text-[#424656] mt-0.5 truncate">
+                {lang === 'en' && selectedNeighborhood.subNameEn
+                  ? selectedNeighborhood.subNameEn
+                  : selectedNeighborhood.subName}
+              </p>
+            </div>
+            {selectedNeighborhood.liquidity && (
+              <div className="flex flex-col items-end shrink-0">
+                <div className="flex items-center gap-1 bg-[#edf4ff] px-2.5 py-1 rounded-xl border border-[#c2c6d8]/30">
+                  <span className="text-[10px] font-bold text-[#424656]">
+                    {lang === 'ko' ? '환금성' : 'Liquidity'}
+                  </span>
+                  <span className="text-[14px] font-extrabold text-[#003dc7]">
+                    {selectedNeighborhood.liquidity.grade}
+                  </span>
+                  <span className="text-[11px] font-extrabold text-[#0051ff]">
+                    {selectedNeighborhood.liquidity.totalScore}점
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 3 Highlight Metric Tiles (경사도 / 소음 dB / 안심 통학) */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-[#edf4ff] rounded-2xl p-2.5 border border-[#c2c6d8]/20">
+              <div className="flex items-center gap-1 text-[#424656] mb-0.5">
+                <span className="material-symbols-outlined text-[14px] text-[#b43d00]">
+                  terrain
+                </span>
+                <span className="text-[10px] font-bold">
+                  {lang === 'ko' ? '경사도' : 'Slope'}
+                </span>
+              </div>
+              <p className="text-[12px] font-extrabold text-[#131c26] truncate">
+                {selectedNeighborhood.inclineAngleDeg}°{' '}
+                {selectedNeighborhood.inclineAngleDeg >= 10
+                  ? lang === 'ko'
+                    ? '오르막'
+                    : 'Steep'
+                  : lang === 'ko'
+                    ? '평지'
+                    : 'Flat'}
+              </p>
+            </div>
+
+            <div className="bg-[#edf4ff] rounded-2xl p-2.5 border border-[#c2c6d8]/20">
+              <div className="flex items-center gap-1 text-[#424656] mb-0.5">
+                <span className="material-symbols-outlined text-[14px] text-[#0051ff]">
+                  graphic_eq
+                </span>
+                <span className="text-[10px] font-bold">
+                  {lang === 'ko' ? '소음 dB' : 'Noise dB'}
+                </span>
+              </div>
+              <p className="text-[12px] font-extrabold text-[#131c26] truncate">
+                {selectedNeighborhood.noiseDb}dB{' '}
+                {selectedNeighborhood.noiseDb <= 35
+                  ? lang === 'ko'
+                    ? '정숙'
+                    : 'Quiet'
+                  : lang === 'ko'
+                    ? '보통'
+                    : 'Mod'}
+              </p>
+            </div>
+
+            <div className="bg-[#edf4ff] rounded-2xl p-2.5 border border-[#c2c6d8]/20">
+              <div className="flex items-center gap-1 text-[#424656] mb-0.5">
+                <span className="material-symbols-outlined text-[14px] text-[#003dc7]">
+                  school
+                </span>
+                <span className="text-[10px] font-bold">
+                  {lang === 'ko' ? '안심 통학' : 'School'}
+                </span>
+              </div>
+              <p className="text-[12px] font-extrabold text-[#131c26] truncate">
+                {selectedNeighborhood.liquidity?.school.label.split(' ')[0] || '초품아'}
+              </p>
+            </div>
+          </div>
+
+          {/* Inline Voice Memo Preview Bar */}
+          <div className="flex items-center justify-between bg-[#e5eeff]/75 rounded-xl px-3 py-2 border border-[#c2c6d8]/25 gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span
+                className={`w-6 h-6 rounded-full bg-[#0051ff] text-white flex items-center justify-center shrink-0 ${
+                  isPlayingFootprintVoice ? 'animate-pulse' : ''
+                }`}
+              >
+                <span className="material-symbols-outlined text-[14px]">mic</span>
+              </span>
+              <p className="text-[11px] font-medium text-[#131c26] truncate">
+                {lang === 'en' && selectedNeighborhood.quoteEn
+                  ? selectedNeighborhood.quoteEn
+                  : selectedNeighborhood.quote}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsPlayingFootprintVoice((prev) => !prev)}
+              className="text-[11px] font-extrabold text-[#003dc7] shrink-0 px-2 py-0.5 rounded-lg bg-white/80 hover:bg-white cursor-pointer"
+            >
+              {isPlayingFootprintVoice
+                ? lang === 'ko'
+                  ? '⏸ 재생중'
+                  : '⏸ Playing'
+                : lang === 'ko'
+                  ? '▶ 듣기'
+                  : '▶ Play'}
+            </button>
+          </div>
+
+          {/* Dual Action Buttons (3D 디오라마 보기 / 현장 퀵기록 & 사진 3D 변환) */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => onSelectNeighborhood(selectedNeighborhood.id)}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-gradient-to-br from-[#0051ff] to-[#003dc7] text-white text-[12px] font-extrabold shadow-[0_6px_16px_rgba(0,81,255,0.22)] active:scale-95 transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[17px]">view_in_ar</span>
+              <span>{lang === 'ko' ? '3D 디오라마 보기' : 'Open 3D Diorama'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onConfirmLocationAndRecord(selectedNeighborhood.id)}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#dfe9f6] hover:bg-[#d6e4f9] text-[#131c26] text-[12px] font-extrabold active:scale-95 transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[17px] text-[#003dc7]">
+                add_a_photo
+              </span>
+              <span>{lang === 'ko' ? '사진·음성 3D 기록' : 'Record & Photo-to-3D'}</span>
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* 2. User's Important Sensory Memory Priorities Selector ("감각기억은 내가 중요하게 생각하는 요소를 고르고") */}
       <section className="bg-white rounded-3xl p-4 border border-[#edf0f3] shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex flex-col gap-2.5">
