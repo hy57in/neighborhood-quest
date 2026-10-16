@@ -486,11 +486,73 @@ async function generateAndVerifyWithGemini4Argon(input: FieldObservationInput): 
       tagline: { type: 'string' },
       englishSummary: { type: 'string' },
       translatedNotesSummary: { type: 'string' },
+      timeOfDay: { type: 'string', enum: ['morning', 'golden_hour', 'twilight'] },
       detectedSlopeDegrees: { type: 'number' },
       detectedHasStairs: { type: 'boolean' },
+      detectedHasRiverOrLake: { type: 'boolean' },
       detectedWalkMinutes: { type: 'number' },
       detectedTreeCount: { type: 'number' },
       detectedNoiseLevel: { type: 'number' },
+      islandPalette: {
+        type: 'object',
+        properties: {
+          grassColor: { type: 'string' },
+          earthColor: { type: 'string' },
+          roadColor: { type: 'string' },
+          skyAccentColor: { type: 'string' },
+          waterColor: { type: 'string' },
+        },
+        required: ['grassColor', 'earthColor', 'roadColor', 'skyAccentColor', 'waterColor'],
+      },
+      buildings: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            kind: {
+              type: 'string',
+              enum: ['apartment', 'cafe', 'house', 'convenience_store', 'community_center'],
+            },
+            label: { type: 'string' },
+            x: { type: 'number' },
+            z: { type: 'number' },
+            width: { type: 'number' },
+            depth: { type: 'number' },
+            floors: { type: 'number' },
+            wallColor: { type: 'string' },
+            roofColor: { type: 'string' },
+            roofStyle: { type: 'string', enum: ['flat', 'pitched', 'terrace', 'mansard'] },
+          },
+          required: [
+            'id',
+            'kind',
+            'label',
+            'x',
+            'z',
+            'width',
+            'depth',
+            'floors',
+            'wallColor',
+            'roofColor',
+            'roofStyle',
+          ],
+        },
+      },
+      trees: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' },
+            z: { type: 'number' },
+            kind: { type: 'string', enum: ['cherry_blossom', 'pine', 'oak', 'ginkgo'] },
+            scale: { type: 'number' },
+            foliageColor: { type: 'string' },
+          },
+          required: ['x', 'z', 'kind', 'scale', 'foliageColor'],
+        },
+      },
       verifiedObservations: { type: 'array', items: { type: 'string' } },
       aiInterpretations: { type: 'array', items: { type: 'string' } },
       pros: { type: 'array', items: { type: 'string' } },
@@ -505,11 +567,16 @@ async function generateAndVerifyWithGemini4Argon(input: FieldObservationInput): 
       'tagline',
       'englishSummary',
       'translatedNotesSummary',
+      'timeOfDay',
       'detectedSlopeDegrees',
       'detectedHasStairs',
+      'detectedHasRiverOrLake',
       'detectedWalkMinutes',
       'detectedTreeCount',
       'detectedNoiseLevel',
+      'islandPalette',
+      'buildings',
+      'trees',
       'verifiedObservations',
       'aiInterpretations',
       'pros',
@@ -566,7 +633,7 @@ async function generateAndVerifyWithGemini4Argon(input: FieldObservationInput): 
       const client = new GoogleGenAI({ apiKey });
 
       const multimodalContents: any[] = [];
-      const photosToInclude = (input.photos || []).slice(0, 3);
+      const photosToInclude = (input.photos || []).slice(0, 4);
       for (const photo of photosToInclude) {
         const parsed = parseDataUrl(photo.dataUrl, photo.mimeType);
         if (parsed) {
@@ -580,15 +647,21 @@ async function generateAndVerifyWithGemini4Argon(input: FieldObservationInput): 
 
       multimodalContents.push({
         type: 'text',
-        text: `You are the Multimodal 3D World Architect for "Neighborhood Quest", a cozy 3D exploration game for young homebuyers in Seoul.
-Analyze the attached field visit photos and the user's voice note (which may be in Korean or English) and generate a stylized 3D diorama specification in English.
-IMPORTANT: Explicitly separate "verifiedObservations" (facts directly supported by the user's photos, voice note, and sensor ratings) from "aiInterpretations" (stylized 3D representation choices or inferred lifestyle context).
+        text: `You are the Multimodal Image-to-3D World Architect powered by Gemini 4 Argon for "Neighborhood Quest".
+CRITICAL TASK: Carefully inspect the attached photo(s) AND the user's text/voice note. Reconstruct the visual scene from the photo(s) into a rich 3D architectural diorama specification:
+1. Extract 5 to 8 distinct 3D "buildings" that match the buildings, apartments, brick cafes, villas, or shops visible in the photo(s) or described in the note.
+   - Sample exact hex colors ("wallColor", "roofColor") from the buildings in the photo!
+   - Place them across the 3D island coordinates: x in [-3.4, 3.4], z in [-3.2, 2.8] (avoid z between 0.1 and 1.1 where the main sloped road runs), width in [0.9, 1.8], depth in [0.8, 1.5], floors in [1, 18].
+   - Give each building a descriptive Korean/English "label" based on what is seen in the photo.
+2. Extract 8 to 14 "trees" matching the vegetation in the photo (cherry_blossom, pine, oak, ginkgo) with hex "foliageColor" sampled from the photo and coordinates x in [-3.8, 3.8], z in [-3.6, 3.4].
+3. Sample the photo's color palette into "islandPalette" (grassColor, earthColor, roadColor, skyAccentColor, waterColor) and detect "timeOfDay" ('morning' | 'golden_hour' | 'twilight'), "detectedSlopeDegrees" (0 to 24), "detectedHasStairs", and "detectedHasRiverOrLake".
+4. Explicitly separate "verifiedObservations" (what you visually verified from the attached photo & note) from "aiInterpretations".
 
 Neighborhood: ${input.neighborhoodName} (${input.neighborhoodNameKo}), ${input.district}
 Target Apartment: ${input.apartmentName}
 Nearest Subway: ${input.subwayStation} (${input.subwayLine})
 User Voice/Text Note (${input.voiceLanguage}): "${input.voiceNoteText}"
-User Sensor Ratings: Hill Steepness=${input.quickRatings.hillSteepness}/100, Park Greenery=${input.quickRatings.parkGreenery}/100, Subway Walk=${input.quickRatings.subwayWalkMinutes} min, Traffic Noise=${input.quickRatings.trafficNoise}/100.`,
+Attached Photos Count: ${photosToInclude.length}`,
       });
 
       const stage1Interaction: any = await client.interactions.create({
@@ -611,17 +684,17 @@ User Sensor Ratings: Hill Steepness=${input.quickRatings.hillSteepness}/100, Par
       const stage2Interaction: any = await client.interactions.create({
         model: 'gemini-4-argon',
         previous_interaction_id: stage1Interaction.id,
-        input: `AUTOMATED VERIFICATION LOOP (Generation -> Validation -> Correction):
-Audit the Stage 1 3D parameters against the user's actual observations ("${input.voiceNoteText}") and ratings (Hill=${input.quickRatings.hillSteepness}/100, Park=${input.quickRatings.parkGreenery}/100, Subway=${input.quickRatings.subwayWalkMinutes}min, Noise=${input.quickRatings.trafficNoise}/100).
+        input: `AUTOMATED VERIFICATION LOOP (Image-to-3D Validation & Correction):
+Audit the Stage 1 3D reconstruction (buildings, colors, terrain slope, stairs, trees, and acoustics) against the attached photo(s) and user's note ("${input.voiceNoteText}").
 Check all 5 categories: terrain, transit, greenery, acoustics, architecture.
-If any Stage 1 parameter drifted from the user's observation, mark status="auto_patched" and provide the corrected verified parameter in English.`,
+If any Stage 1 parameter drifted from the visual evidence in the photo or user note, mark status="auto_patched" and provide the corrected verified parameter.`,
         response_format: {
           type: 'text',
           mime_type: 'application/json',
           schema: stage2VerifierSchema,
         } as any,
         generation_config: {
-          thinking_level: 'medium',
+          thinking_level: 'low',
         } as any,
       });
 
@@ -647,8 +720,27 @@ If any Stage 1 parameter drifted from the user's observation, mark status="auto_
       baseBlueprint.englishSummary = stage1Json.englishSummary || baseBlueprint.englishSummary;
       baseBlueprint.originalNotesSummary = stage1Json.translatedNotesSummary || baseBlueprint.originalNotesSummary;
 
+      if (stage1Json.timeOfDay) {
+        baseBlueprint.timeOfDay = stage1Json.timeOfDay;
+      }
+      if (stage1Json.islandPalette) {
+        baseBlueprint.islandPalette = {
+          ...baseBlueprint.islandPalette,
+          ...stage1Json.islandPalette,
+        };
+      }
+      if (Array.isArray(stage1Json.buildings) && stage1Json.buildings.length >= 2) {
+        baseBlueprint.buildings = stage1Json.buildings;
+      }
+      if (Array.isArray(stage1Json.trees) && stage1Json.trees.length >= 3) {
+        baseBlueprint.trees = stage1Json.trees;
+      }
+
       baseBlueprint.terrain.slopeDegrees = finalSlope;
       baseBlueprint.terrain.hasHillsideStairs = finalHasStairs;
+      baseBlueprint.terrain.hasRiverOrLake = Boolean(
+        stage1Json.detectedHasRiverOrLake ?? baseBlueprint.terrain.hasRiverOrLake
+      );
       baseBlueprint.transit.walkMinutes = finalWalkMins;
       baseBlueprint.traffic.noiseLevel = finalNoise;
       baseBlueprint.traffic.carCount = Math.max(1, Math.min(6, Math.ceil(finalNoise / 18)));

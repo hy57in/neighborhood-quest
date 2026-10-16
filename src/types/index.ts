@@ -1,4 +1,44 @@
+import type { SceneBlueprint, VerificationReport } from '../types.ts';
+
 export type SensoryLayerType = 'all' | 'incline' | 'greenery' | 'noise' | 'mood';
+
+export type SensoryPriorityId =
+  | 'sunset_lighting'
+  | 'park_forest'
+  | 'quiet_night'
+  | 'cafe_alley'
+  | 'open_view'
+  | 'safe_walkway';
+
+export interface LiquidityItem {
+  score: number; // 0 - 100
+  label: string;
+  labelKo?: string;
+  labelEn?: string;
+  detail: string;
+  detailKo?: string;
+  detailEn?: string;
+}
+
+/**
+ * 객관적 입지 (환금성 6대 기준)
+ * 1. 브랜드 (brand)
+ * 2. 신축 (newBuild)
+ * 3. 역세권 (subway)
+ * 4. 학군 (school)
+ * 5. 평지 (flatness)
+ * 6. 세대수 (households)
+ */
+export interface LiquidityMetrics {
+  brand: LiquidityItem;
+  newBuild: LiquidityItem;
+  subway: LiquidityItem;
+  school: LiquidityItem;
+  flatness: LiquidityItem;
+  households: LiquidityItem;
+  totalScore: number;
+  grade: 'S' | 'A+' | 'A' | 'B+' | 'B';
+}
 
 export interface SensoryMetric {
   type: 'incline' | 'coziness' | 'noise' | 'greenery';
@@ -6,7 +46,7 @@ export interface SensoryMetric {
   titleEn?: string;
   value: string;
   valueEn?: string;
-  numericValue: number; // 0-100 or dB or mins
+  numericValue: number;
   status: string;
   statusEn?: string;
   subtext: string;
@@ -72,9 +112,13 @@ export interface NeighborhoodData {
     lat: number;
     lng: number;
   };
-  perspective?: 'jamie' | 'sam';
+  perspective?: 'pingu' | 'gyodong';
+  sensoryPriorities?: SensoryPriorityId[];
+  liquidity?: LiquidityMetrics;
   memoryLayers?: MemoryLayers;
   geminiVerifiedAt?: string;
+  blueprint?: SceneBlueprint;
+  verification?: VerificationReport;
 }
 
 export type TabType = 'explore' | 'diorama' | 'compare' | 'bookmarks' | 'record';

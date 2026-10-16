@@ -1,622 +1,622 @@
-import React, { useState } from 'react';
-import { INITIAL_NEIGHBORHOODS } from './data/neighborhoods.ts';
+import React, { useState, useRef } from 'react';
+import {
+  INITIAL_NEIGHBORHOODS,
+  LIQUIDITY_PILLAR_META,
+  SENSORY_PRIORITY_OPTIONS,
+  buildLiquidityMetrics,
+  buildSensoryMetrics,
+  createDetailedSceneDataUrl,
+} from './data/neighborhoods.ts';
 import {
   Lang,
+  LiquidityMetrics,
   NeighborhoodData,
+  PhotoRecord,
   SensoryLayerType,
-  SensoryMetric,
+  SensoryPriorityId,
   TabType,
 } from './types/index.ts';
-import { localizeNeighborhood } from './i18n/translations.ts';
-import {
-  getCozinessLabel,
-  getGreeneryLabel,
-  getInclineLabel,
-  getNoiseLabel,
-} from './utils/sensoryCalculations.ts';
+import type {
+  FieldObservationInput,
+  SceneBlueprint,
+  VerificationReport,
+} from './types.ts';
 import { Header } from './components/Header.tsx';
+import { BottomNav } from './components/BottomNav.tsx';
+import { ExploreView } from './components/ExploreView.tsx';
 import { DioramaStage } from './components/DioramaStage.tsx';
 import { QuoteCard } from './components/QuoteCard.tsx';
 import { SensoryMetricsGrid } from './components/SensoryMetricsGrid.tsx';
-import { AudioPlayerCard } from './components/AudioPlayerCard.tsx';
 import { PhotoGalleryCard } from './components/PhotoGalleryCard.tsx';
-import { BottomActionTray } from './components/BottomActionTray.tsx';
-import { BottomNav } from './components/BottomNav.tsx';
-import { CalibrationModal } from './components/CalibrationModal.tsx';
-import { ExploreView } from './components/ExploreView.tsx';
 import { CompareView } from './components/CompareView.tsx';
 import { BookmarkView } from './components/BookmarkView.tsx';
-import { RecordingView } from './components/RecordingView.tsx';
+import { RecordingView, CapturedMoment } from './components/RecordingView.tsx';
+import { CharacterAvatar } from './components/CharacterAvatar.tsx';
 
 export function App() {
   const [lang, setLang] = useState<Lang>('ko');
+  // Start on 'explore' (탐색) so user immediately sees the map & location verification flow
+  const [activeTab, setActiveTab] = useState<TabType>('explore');
+  const [recordSubTab, setRecordSubTab] = useState<'capture' | 'bookmarks'>('capture');
+
   const [neighborhoods, setNeighborhoods] = useState<NeighborhoodData[]>(INITIAL_NEIGHBORHOODS);
-  const [selectedId, setSelectedId] = useState<string>('seonghyeon-dong');
-  const [activeTab, setActiveTab] = useState<TabType>('diorama');
+  const [selectedId, setSelectedId] = useState<string>(INITIAL_NEIGHBORHOODS[0].id);
   const [activeLayer, setActiveLayer] = useState<SensoryLayerType>('all');
-  const [compareIds, setCompareIds] = useState<string[]>(['seonghyeon-dong']);
-  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(['seonghyeon-dong']);
-  const [isCalibrationOpen, setIsCalibrationOpen] = useState<boolean>(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const rawNeighborhood =
+  const [compareIds, setCompareIds] = useState<string[]>([
+    INITIAL_NEIGHBORHOODS[0].id,
+    INITIAL_NEIGHBORHOODS[4].id,
+  ]);
+  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([
+    INITIAL_NEIGHBORHOODS[0].id,
+    INITIAL_NEIGHBORHOODS[1].id,
+    INITIAL_NEIGHBORHOODS[2].id,
+  ]);
+
+  const [selectedSensoryPriorities, setSelectedSensoryPriorities] = useState<SensoryPriorityId[]>([
+    'sunset_lighting',
+    'park_forest',
+    'quiet_night',
+    'safe_walkway',
+  ]);
+
+  const [isGenerating3D, setIsGenerating3D] = useState<boolean>(false);
+  const [generationStatus, setGenerationStatus] = useState<string>('');
+  const [shareToast, setShareToast] = useState<string | null>(null);
+  const quickPhotoInputRef = useRef<HTMLInputElement | null>(null);
+
+  const activeNeighborhood =
     neighborhoods.find((n) => n.id === selectedId) || neighborhoods[0];
-  const currentNeighborhood = localizeNeighborhood(rawNeighborhood, lang);
-  const localizedNeighborhoods = neighborhoods.map((n) => localizeNeighborhood(n, lang));
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage((prev) => (prev === msg ? null : prev));
-    }, 2400);
+  const handleToggleSensoryPriority = (id: SensoryPriorityId) => {
+    setSelectedSensoryPriorities((prev) =>
+      prev.includes(id) ? (prev.length > 1 ? prev.filter((p) => p !== id) : prev) : [...prev, id]
+    );
   };
 
-  const handleToggleLang = () => {
-    setLang((prev) => {
-      const next = prev === 'ko' ? 'en' : 'ko';
-      showToast(next === 'ko' ? '한국어 모드로 전환되었습니다.' : 'Switched to English mode.');
-      return next;
-    });
+  const handleToggleCompare = (id: string) => {
+    setCompareIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
   };
 
-  const handleToggleBookmark = (id: string = selectedId) => {
-    setBookmarkedIds((prev) => {
-      const exists = prev.includes(id);
-      const next = exists ? prev.filter((item) => item !== id) : [...prev, id];
-      showToast(
-        exists
-          ? lang === 'ko'
-            ? '보관함에서 제거되었습니다.'
-            : 'Removed from saved quests.'
-          : lang === 'ko'
-            ? '보관함에 동네가 저장되었습니다.'
-            : 'Neighborhood saved to collection.'
-      );
-      return next;
-    });
+  const handleToggleBookmark = (id: string) => {
+    setBookmarkedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
   };
 
-  const handleToggleCompare = (id: string = selectedId) => {
-    setCompareIds((prev) => {
-      const exists = prev.includes(id);
-      const next = exists ? prev.filter((item) => item !== id) : [...prev, id];
-      showToast(
-        exists
-          ? lang === 'ko'
-            ? '비교함에서 제외되었습니다.'
-            : 'Removed from comparison.'
-          : lang === 'ko'
-            ? `비교함에 추가되었습니다 (${next.length}개)`
-            : `Added to comparison (${next.length})`
-      );
-      return next;
-    });
-  };
-
-  const handleShare = async () => {
-    const shareText = `[Neighborhood Quest] ${currentNeighborhood.name} - ${currentNeighborhood.quote}`;
-    if (navigator.clipboard) {
-      try {
-        await navigator.clipboard.writeText(shareText);
-        showToast(
-          lang === 'ko'
-            ? '디오라마 공유 링크가 클립보드에 복사되었습니다.'
-            : 'Diorama share link copied to clipboard.'
-        );
-        return;
-      } catch {
-        // Fallback below
-      }
-    }
-    showToast(
+  const handleShare = () => {
+    const msg =
       lang === 'ko'
-        ? '공유 텍스트가 준비되었습니다.'
-        : 'Share link ready.'
-    );
+        ? `‘${activeNeighborhood.name}’ 3D 디오라마 & 입지 리포트 링크가 복사되었습니다.`
+        : `Copied 3D Diorama link for '${activeNeighborhood.nameEn || activeNeighborhood.name}'.`;
+    setShareToast(msg);
+    setTimeout(() => setShareToast(null), 2600);
   };
 
-  const handleSaveCalibration = (updated: Partial<NeighborhoodData>) => {
-    setNeighborhoods((prev) =>
-      prev.map((n) => (n.id === selectedId ? { ...n, ...updated } : n))
-    );
-    showToast(
-      lang === 'ko'
-        ? '감각 지표 및 3D 디오라마가 보정되었습니다.'
-        : 'Sensory metrics and 3D diorama updated.'
-    );
-  };
-
-  const handleSwitchPerspective = (nextPerspective: 'jamie' | 'sam') => {
-    const isSam = nextPerspective === 'sam';
-    const cozinessPercent = isSam ? 64 : 92;
-    const noiseDb = isSam ? 36 : 28;
-    const inclinePercent = rawNeighborhood.inclinePercent; // Physical slope stays identical!
-    const greenWalkMinutes = rawNeighborhood.greenWalkMinutes;
-
-    const updatedMetrics = rawNeighborhood.metrics.map((m) => {
-      if (m.type === 'coziness') {
-        return {
-          ...m,
-          value: `${cozinessPercent}%`,
-          valueEn: `${cozinessPercent}%`,
-          numericValue: cozinessPercent,
-          status: getCozinessLabel(cozinessPercent, 'ko'),
-          statusEn: getCozinessLabel(cozinessPercent, 'en'),
-          subtext: isSam ? '출퇴근 피로도 중심 체감' : '따뜻한 골목 조도 & 노을',
-          subtextEn: isSam ? 'Commute-focused perception' : 'Warm alley lighting & sunset',
-        };
-      }
-      if (m.type === 'noise') {
-        return {
-          ...m,
-          value: `${noiseDb}dB`,
-          valueEn: `${noiseDb}dB`,
-          numericValue: noiseDb,
-          status: getNoiseLabel(noiseDb, 'ko'),
-          statusEn: getNoiseLabel(noiseDb, 'en'),
-        };
-      }
-      return m;
-    });
-
-    setNeighborhoods((prev) =>
-      prev.map((n) =>
-        n.id === selectedId
-          ? {
-              ...n,
-              perspective: nextPerspective,
-              quoteAuthor: isSam ? 'Sam' : 'Jamie',
-              cozinessPercent,
-              noiseDb,
-              quote: isSam
-                ? '“역에서 올라오는 85% 경사 언덕이 출퇴근길엔 꽤 부담스럽고 골목 주차도 빠듯하지만, 밤공기는 조용한 편이에요.”'
-                : '“역에서 올라오는 언덕은 꽤 가팔랐지만, 골목 끝 노을빛과 작은 공원, 그리고 아늑한 저녁 불빛이 하루의 피로를 씻어주는 동네였어요.”',
-              quoteEn: isSam
-                ? '“The 85% uphill climb from the station feels taxing for daily commutes and parking is tight, though the night air is quiet.”'
-                : '“The hill from the station was quite steep, but the sunset glow at the end of the alley, the little park, and the warm evening lights washed away the day’s fatigue.”',
-              memoryLayers: {
-                physical: [
-                  `경사도 ${inclinePercent}% (${n.inclineAngleDeg}° 오르막 동일)`,
-                  n.stationDistance,
-                  `공원 도보 ${greenWalkMinutes}분`,
-                ],
-                sensory: isSam
-                  ? ['가파른 보행 호흡 부담', '좁은 골목 양방향 차량 교행']
-                  : ['저녁 골목 주황빛 가로등 조도', `대로변 차단 극저소음 (${noiseDb}dB)`],
-                emotional: isSam
-                  ? [`아늑함 ${cozinessPercent}% · 매일 정장 입고 출퇴근하기엔 부담스러운 언덕`]
-                  : [`아늑함 ${cozinessPercent}% · 하루의 피로가 씻기는 따뜻한 동네`],
-              },
-              metrics: updatedMetrics,
-            }
-          : n
-      )
-    );
-
-    showToast(
-      lang === 'ko'
-        ? `${isSam ? '🧑 Sam (출퇴근·주차 현실주의)' : '👩 Jamie (골목 감성·노을)'}의 기억 관점으로 전환되었습니다.`
-        : `Switched to ${isSam ? "Sam's (Commute/Practical)" : "Jamie's (Cozy/Emotional)"} memory perspective.`
-    );
-  };
-
-  const [startRecordEmpty, setStartRecordEmpty] = useState<boolean>(false);
-
-  const handleStartFreshRecording = () => {
-    setStartRecordEmpty(true);
-    setActiveTab('record');
-    showToast(
-      lang === 'ko'
-        ? '🌱 빈 백지 상태에서 새 임장 기록을 시작합니다!'
-        : '🌱 Starting a fresh field recording from a blank slate!'
-    );
-  };
-
-  const handleSynthesizeWithGemini = async (params: {
-    perspective: 'jamie' | 'sam';
-    moments: { title: string; description: string }[];
+  // Call Gemini 4 Argon backend (/api/generate-world) to synthesize 3D blueprint + verification from photo & notes
+  const synthesizeNeighborhoodWithGemini4Argon = async (params: {
+    perspective: 'pingu' | 'gyodong';
+    moments: CapturedMoment[];
     inclinePercent: number;
     cozinessPercent: number;
     noiseDb: number;
     greenWalkMinutes: number;
     quote: string;
     quoteEn: string;
-    uploadedPhotos?: string[];
+    uploadedPhotos: string[];
+    sensoryPriorities: SensoryPriorityId[];
+    liquidityOverride?: LiquidityMetrics;
   }) => {
-    const combinedNotes = params.moments
-      .map((m) => `${m.title}: ${m.description}`)
-      .join('\n');
+    setIsGenerating3D(true);
+    setGenerationStatus(
+      lang === 'ko'
+        ? 'Gemini 4 Argon이 첨부 이미지와 환금성 6대 기준·감각기억을 3D 월드로 모델링 중...'
+        : 'Gemini 4 Argon modeling 3D world from your attached photo, 6 liquidity pillars & sensory notes...'
+    );
 
-    let geminiPhysical: string[] | undefined;
-    let geminiSensory: string[] | undefined;
-    let geminiEmotional: string[] | undefined;
+    const primaryPhotoUrl =
+      params.uploadedPhotos[0] ||
+      activeNeighborhood.photos?.[0]?.url ||
+      activeNeighborhood.dioramaImageUrl;
+
+    const liq = params.liquidityOverride || activeNeighborhood.liquidity;
+    const slopeDeg = Math.max(2, Math.min(24, Math.round(params.inclinePercent * 0.22)));
+
+    const observationPayload: FieldObservationInput = {
+      neighborhoodId: activeNeighborhood.id,
+      neighborhoodName: activeNeighborhood.nameEn || activeNeighborhood.name,
+      neighborhoodNameKo: activeNeighborhood.name,
+      district: activeNeighborhood.subName,
+      apartmentName: activeNeighborhood.name,
+      subwayStation: activeNeighborhood.stationDistance,
+      subwayLine: '2호선',
+      subwayLineColor: '#10b981',
+      voiceNoteText: params.quote.replace(/^[“"]|[”"]$/g, ''),
+      voiceLanguage: lang === 'en' ? 'en-US' : 'ko-KR',
+      photos: [
+        {
+          id: `photo-${Date.now()}`,
+          dataUrl: primaryPhotoUrl,
+          mimeType: 'image/jpeg',
+          caption: `${activeNeighborhood.name} 첨부 사진`,
+          tag: 'building',
+        },
+      ],
+      quickRatings: {
+        hillSteepness: params.inclinePercent,
+        parkGreenery: Math.max(50, 100 - params.greenWalkMinutes * 8),
+        subwayWalkMinutes: 5,
+        trafficNoise: params.noiseDb,
+        cafeMartConvenience: liq?.households.score ?? 90,
+      },
+    };
+
+    let blueprint: SceneBlueprint | undefined;
+    let verification: VerificationReport | undefined;
 
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3500);
-      const response = await fetch('/api/generate-world', {
+      const timeoutId = setTimeout(() => controller.abort(), 14000);
+      const res = await fetch('/api/generate-world', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(observationPayload),
         signal: controller.signal,
-        body: JSON.stringify({
-          neighborhoodId: selectedId,
-          neighborhoodName: rawNeighborhood.nameEn || rawNeighborhood.name,
-          neighborhoodNameKo: rawNeighborhood.name,
-          district: rawNeighborhood.subName,
-          apartmentName: rawNeighborhood.name,
-          subwayStation: rawNeighborhood.stationDistance,
-          subwayLine: 'Line 2',
-          voiceNoteText: combinedNotes || params.quote,
-          voiceLanguage: lang,
-          photos: (params.uploadedPhotos || []).map((dataUrl, idx) => ({
-            id: `up-${idx}`,
-            label: 'Uploaded Field Photo',
-            dataUrl,
-            mimeType: 'image/jpeg',
-          })),
-          quickRatings: {
-            hillSteepness: params.inclinePercent,
-            parkGreenery: Math.max(20, 100 - params.greenWalkMinutes * 7),
-            subwayWalkMinutes: 5,
-            trafficNoise: params.noiseDb,
-          },
-        }),
       });
-      clearTimeout(timeout);
-      if (response.ok) {
-        const data = await response.json();
-        if (data?.verification?.verifiedObservations?.length) {
-          geminiPhysical = [
-            `경사도 ${params.inclinePercent}% (${Math.max(2, Math.round(params.inclinePercent * 0.21))}° 지형 검증)`,
-            `공원 도보 ${params.greenWalkMinutes}분`,
-          ];
-          geminiSensory = [
-            `실측 소음 ${params.noiseDb}dB (${getNoiseLabel(params.noiseDb, 'ko')})`,
-            params.inclinePercent >= 60 ? '가파른 오르막 보행 체감' : '평탄하고 걷기 편한 보행로',
-          ];
-          geminiEmotional = [
-            params.perspective === 'sam'
-              ? `교동(Sam): 아늑함 ${params.cozinessPercent}% · 출퇴근/현실 체감 반영`
-              : `핑구(Jamie): 아늑함 ${params.cozinessPercent}% · 동네 감성/분위기 반영`,
-          ];
-        }
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        blueprint = data.blueprint;
+        verification = data.verification;
       }
     } catch {
-      // Fallback to local 3-layer synthesis if offline or timed out
+      // Fallback handled cleanly below
     }
 
-    const updatedInclineAngle = Math.max(2, Math.round(params.inclinePercent * 0.21));
-
-    const updatedMetrics = rawNeighborhood.metrics.map((m) => {
-      if (m.type === 'incline') {
-        return {
-          ...m,
-          value: `${params.inclinePercent}%`,
-          valueEn: `${params.inclinePercent}%`,
-          numericValue: params.inclinePercent,
-          status: getInclineLabel(params.inclinePercent, 'ko'),
-          statusEn: getInclineLabel(params.inclinePercent, 'en'),
-          subtext: `체감 각도 약 ${updatedInclineAngle}° · 직접 기록 반영됨`,
-          subtextEn: `Est. ${updatedInclineAngle}° slope · Updated from your note`,
-        };
-      }
-      if (m.type === 'coziness') {
-        return {
-          ...m,
-          value: `${params.cozinessPercent}%`,
-          valueEn: `${params.cozinessPercent}%`,
-          numericValue: params.cozinessPercent,
-          status: getCozinessLabel(params.cozinessPercent, 'ko'),
-          statusEn: getCozinessLabel(params.cozinessPercent, 'en'),
-          subtext:
-            params.perspective === 'sam'
-              ? '교동(Sam) 현실 체감 반영'
-              : '핑구(Jamie) 감성 체감 반영',
-          subtextEn:
-            params.perspective === 'sam'
-              ? 'Gyodong (Sam) practical impression'
-              : 'Pingu (Jamie) emotional impression',
-        };
-      }
-      if (m.type === 'noise') {
-        return {
-          ...m,
-          value: `${params.noiseDb}dB`,
-          valueEn: `${params.noiseDb}dB`,
-          numericValue: params.noiseDb,
-          status: getNoiseLabel(params.noiseDb, 'ko'),
-          statusEn: getNoiseLabel(params.noiseDb, 'en'),
-          subtext:
-            params.noiseDb >= 55
-              ? '대로변 차량 소음 감지됨'
-              : '도서관 수준 정온 골목',
-          subtextEn:
-            params.noiseDb >= 55
-              ? 'Roadside traffic noise detected'
-              : 'Library-quiet residential lane',
-        };
-      }
-      if (m.type === 'greenery') {
-        return {
-          ...m,
-          value: `${params.greenWalkMinutes}분`,
-          valueEn: `${params.greenWalkMinutes}m`,
-          numericValue: params.greenWalkMinutes,
-          status: getGreeneryLabel(params.greenWalkMinutes, 'ko').split(' ')[0],
-          statusEn: getGreeneryLabel(params.greenWalkMinutes, 'en').split(' ')[0],
-        };
-      }
-      return m;
-    });
+    const finalSlopeDeg = blueprint?.terrain?.slopeDegrees ?? slopeDeg;
+    const newPhotoRecords: PhotoRecord[] =
+      params.uploadedPhotos.length > 0
+        ? [
+            {
+              id: `up-${Date.now()}`,
+              url: params.uploadedPhotos[0],
+              alt: `${activeNeighborhood.name} 첨부 이미지`,
+              caption: '첨부 이미지 → 3D 릴리프 & 건물 변환 원본',
+              captionEn: 'Source Photo for 3D Reconstruction',
+              timeTaken: lang === 'ko' ? '방금 첨부됨' : 'Uploaded just now',
+            },
+            ...activeNeighborhood.photos.slice(0, 2),
+          ]
+        : activeNeighborhood.photos;
 
     setNeighborhoods((prev) =>
-      prev.map((n) => {
-        if (n.id !== selectedId) return n;
-
-        const newPhotos =
-          params.uploadedPhotos && params.uploadedPhotos.length > 0
-            ? [
-                ...params.uploadedPhotos.map((url, idx) => ({
-                  id: `user-photo-${Date.now()}-${idx}`,
-                  url,
-                  alt: '직접 업로드한 현장 사진',
-                  altEn: 'User uploaded field photo',
-                  caption: '방금 직접 촬영·업로드한 동네 사진',
-                  captionEn: 'Just uploaded from your field visit',
-                  tag: '직접 촬영',
-                  tagEn: 'Your Photo',
-                  timestamp: '방금 전',
-                })),
-                ...n.photos,
-              ]
-            : n.photos;
-
+      prev.map((item) => {
+        if (item.id !== activeNeighborhood.id) return item;
         return {
-          ...n,
+          ...item,
           perspective: params.perspective,
-          quoteAuthor: params.perspective === 'sam' ? 'Sam' : 'Jamie',
+          quote: params.quote,
+          quoteEn: blueprint?.englishSummary ? `“${blueprint.englishSummary}”` : params.quoteEn,
+          quoteAuthor: params.perspective === 'gyodong' ? '교동' : '핑구',
+          dioramaImageUrl: primaryPhotoUrl,
+          inclineAngleDeg: finalSlopeDeg,
           inclinePercent: params.inclinePercent,
-          inclineAngleDeg: updatedInclineAngle,
           cozinessPercent: params.cozinessPercent,
           noiseDb: params.noiseDb,
           greenWalkMinutes: params.greenWalkMinutes,
-          quote: params.quote,
-          quoteEn: params.quoteEn,
-          audioMemo: {
-            ...n.audioMemo,
-            title:
-              params.perspective === 'sam'
-                ? '현장 음성·메모 기록 (교동·Sam)'
-                : '현장 음성·메모 기록 (핑구·Jamie)',
-            titleEn:
-              params.perspective === 'sam'
-                ? 'Field Voice & Note (Gyodong·Sam)'
-                : 'Field Voice & Note (Pingu·Jamie)',
-            recordedAt: '방금 직접 기록됨',
-            recordedAtEn: 'Recorded just now',
-            transcript: params.quote.replace(/^“|”$/g, ''),
-            transcriptEn: params.quoteEn.replace(/^“|”$/g, ''),
-          },
-          photos: newPhotos,
-          memoryLayers: {
-            physical: geminiPhysical?.length
-              ? geminiPhysical
-              : [
-                  `경사도 ${params.inclinePercent}% (${updatedInclineAngle}° 지형)`,
-                  `공원 도보 ${params.greenWalkMinutes}분`,
-                ],
-            sensory: geminiSensory?.length
-              ? geminiSensory
-              : [
-                  `실측 소음 ${params.noiseDb}dB (${getNoiseLabel(params.noiseDb, 'ko')})`,
-                  params.inclinePercent >= 60 ? '오르막 경사 체감' : '평탄한 보행 체감',
-                ],
-            emotional: geminiEmotional?.length
-              ? geminiEmotional
-              : [
-                  params.perspective === 'sam'
-                    ? `교동(Sam): 아늑함 ${params.cozinessPercent}% · 현실 체감 반영`
-                    : `핑구(Jamie): 아늑함 ${params.cozinessPercent}% · 감성 체감 반영`,
-                ],
-          },
-          metrics: updatedMetrics,
+          sensoryPriorities: params.sensoryPriorities,
+          liquidity: liq,
+          blueprint: blueprint || item.blueprint,
+          verification: verification || item.verification,
+          geminiVerifiedAt: new Date().toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          metrics: buildSensoryMetrics(
+            params.inclinePercent,
+            params.cozinessPercent,
+            params.noiseDb,
+            params.greenWalkMinutes
+          ),
+          photos: newPhotoRecords,
         };
       })
     );
 
-    setStartRecordEmpty(false);
-    showToast(
-      lang === 'ko'
-        ? '✨ 직접 기록한 내용이 3D 디오라마와 감각 지표에 반영되었습니다!'
-        : '✨ Your custom recording is now live in the 3D Diorama!'
-    );
+    setIsGenerating3D(false);
+    setGenerationStatus('');
   };
 
-  const handleSelectNeighborhood = (id: string) => {
-    setSelectedId(id);
-    setActiveLayer('all');
-    setActiveTab('diorama');
-  };
-
-  const handleMetricClick = (metric: SensoryMetric) => {
-    const mapTypeToLayer: Record<SensoryMetric['type'], SensoryLayerType> = {
-      incline: 'incline',
-      coziness: 'mood',
-      noise: 'noise',
-      greenery: 'greenery',
+  // Direct 1-click photo upload on the Diorama tab so user can immediately test photo-to-3D reconstruction
+  const handleDirectDioramaPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : undefined;
+      if (!dataUrl) return;
+      await synthesizeNeighborhoodWithGemini4Argon({
+        perspective: activeNeighborhood.perspective || 'pingu',
+        moments: [],
+        inclinePercent: activeNeighborhood.inclinePercent,
+        cozinessPercent: activeNeighborhood.cozinessPercent,
+        noiseDb: activeNeighborhood.noiseDb,
+        greenWalkMinutes: activeNeighborhood.greenWalkMinutes,
+        quote: activeNeighborhood.quote,
+        quoteEn: activeNeighborhood.quoteEn || activeNeighborhood.quote,
+        uploadedPhotos: [dataUrl],
+        sensoryPriorities: selectedSensoryPriorities,
+        liquidityOverride: activeNeighborhood.liquidity,
+      });
     };
-    const targetLayer = mapTypeToLayer[metric.type];
-    setActiveLayer((prev) => (prev === targetLayer ? 'all' : targetLayer));
+    reader.readAsDataURL(file);
   };
-
-  const isBookmarked = bookmarkedIds.includes(selectedId);
-  const isInCompare = compareIds.includes(selectedId);
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191f28] pb-36">
-      {/* Top Navigation Bar */}
+    <div className="min-h-screen bg-[#f7f9fb] text-[#191f28] flex flex-col">
+      {/* Hidden input for quick photo-to-3D upload directly on Diorama tab */}
+      <input
+        ref={quickPhotoInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleDirectDioramaPhotoUpload}
+      />
+
+      {/* Top Mobile/Desktop Header */}
       <Header
-        neighborhood={currentNeighborhood}
-        isBookmarked={isBookmarked}
-        onToggleBookmark={() => handleToggleBookmark(selectedId)}
-        onBack={() => setActiveTab(activeTab === 'diorama' ? 'explore' : 'diorama')}
+        neighborhood={activeNeighborhood}
+        isBookmarked={bookmarkedIds.includes(activeNeighborhood.id)}
+        onToggleBookmark={() => handleToggleBookmark(activeNeighborhood.id)}
+        onBack={() => setActiveTab(activeTab === 'explore' ? 'diorama' : 'explore')}
         onShare={handleShare}
         showBackButton={activeTab !== 'explore'}
         lang={lang}
-        onToggleLang={handleToggleLang}
+        onToggleLang={() => setLang((prev) => (prev === 'ko' ? 'en' : 'ko'))}
       />
 
-      {/* Toast Feedback Banner */}
-      {toastMessage && (
-        <div
-          role="status"
-          className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[#191f28]/90 text-white text-xs font-semibold shadow-lg backdrop-blur-md transition-all"
-        >
-          {toastMessage}
+      {/* Toast message */}
+      {shareToast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg">
+          {shareToast}
         </div>
       )}
 
-      {/* Main Container */}
-      <main className="max-w-md mx-auto pt-16 px-4 flex flex-col gap-4">
+      {/* Main Content Container */}
+      <main className="flex-1 max-w-md w-full mx-auto pt-16 pb-24 px-4 flex flex-col gap-3.5">
+        {/* TAB 1: EXPLORE (탐색 — 지도에서 탐색 + 위치 확인/검색 + 감각기억/환금성 6대 기준) */}
+        {activeTab === 'explore' && (
+          <ExploreView
+            neighborhoods={neighborhoods}
+            selectedId={activeNeighborhood.id}
+            compareIds={compareIds}
+            selectedSensoryPriorities={selectedSensoryPriorities}
+            onToggleSensoryPriority={handleToggleSensoryPriority}
+            onSelectNeighborhood={(id) => {
+              setSelectedId(id);
+              setActiveTab('diorama');
+            }}
+            onConfirmLocationAndRecord={(id) => {
+              setSelectedId(id);
+              setRecordSubTab('capture');
+              setActiveTab('record');
+            }}
+            onAddNewPlaceNeighborhood={(newPlace, goToRecord) => {
+              setNeighborhoods((prev) => {
+                const exists = prev.some((n) => n.id === newPlace.id);
+                return exists ? prev : [newPlace, ...prev];
+              });
+              setSelectedId(newPlace.id);
+              setBookmarkedIds((prev) =>
+                prev.includes(newPlace.id) ? prev : [newPlace.id, ...prev]
+              );
+              if (goToRecord) {
+                setRecordSubTab('capture');
+                setActiveTab('record');
+              } else {
+                setActiveTab('diorama');
+              }
+            }}
+            onToggleCompare={handleToggleCompare}
+            lang={lang}
+          />
+        )}
+
+        {/* TAB 2: DIORAMA (디오라마 — 첨부 이미지 기반 3D 입체 복원 + 환금성 6대 입지 + 감각기억) */}
         {activeTab === 'diorama' && (
-          <>
-            {/* Live Recording Status Quick Jump Banner + Fresh Start CTA */}
-            <div className="bg-white px-3.5 py-2.5 rounded-2xl border border-[#edf0f3] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-between gap-2">
-              <div
-                onClick={() => {
-                  setStartRecordEmpty(false);
-                  setActiveTab('record');
-                }}
-                className="flex items-center gap-2 cursor-pointer min-w-0"
-              >
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shrink-0" />
-                <span className="text-[12px] font-bold text-[#191f28] truncate">
-                  {lang === 'ko'
-                    ? '직접 동네 기록해보기'
-                    : 'Record Your Visit'}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={handleStartFreshRecording}
-                  className="px-2.5 py-1 rounded-full bg-[#0051ff] hover:bg-[#0041cc] text-white text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
-                >
-                  <span className="material-symbols-outlined text-[13px]">add_circle</span>
-                  <span>
-                    {lang === 'ko' ? '빈 상태에서 새로 기록' : 'Start Fresh (Empty)'}
-                  </span>
-                </button>
-              </div>
+          <div className="flex flex-col gap-3.5">
+            {/* Neighborhood Quick Switcher Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+              {neighborhoods.map((item) => {
+                const isSelected = item.id === activeNeighborhood.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedId(item.id)}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold flex items-center gap-1.5 whitespace-nowrap transition-all cursor-pointer border ${
+                      isSelected
+                        ? 'bg-[#191f28] text-white border-[#191f28] shadow-xs'
+                        : 'bg-white text-[#4e5968] border-[#edf0f3] hover:bg-slate-50'
+                    }`}
+                  >
+                    <CharacterAvatar
+                      character={item.perspective === 'gyodong' ? 'gyodong' : 'pingu'}
+                      size={16}
+                    />
+                    <span>
+                      {lang === 'en' && item.nameEn
+                        ? item.nameEn.split(' ').slice(0, 2).join(' ')
+                        : item.name.split(' ').slice(0, 2).join(' ')}
+                    </span>
+                    {item.liquidity && (
+                      <span
+                        className={`text-[9px] px-1.5 py-0.2 rounded-full ${
+                          isSelected ? 'bg-indigo-500 text-white' : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {item.liquidity.grade}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
-            {/* 1. 3D Diorama Interactive Stage */}
+            {/* Interactive 3D Diorama Stage (Photo-to-3D Relief + 6 Liquidity Pillars + OrbitControls) */}
             <DioramaStage
-              neighborhood={currentNeighborhood}
+              neighborhood={activeNeighborhood}
               activeLayer={activeLayer}
               onSelectLayer={setActiveLayer}
               lang={lang}
             />
 
-            {/* 2. Field Impression Quote Card */}
-            <QuoteCard
-              quote={currentNeighborhood.quote}
-              author={currentNeighborhood.quoteAuthor}
-              onEditClick={() => setIsCalibrationOpen(true)}
-              perspective={currentNeighborhood.perspective}
-              onSwitchPerspective={handleSwitchPerspective}
-              memoryLayers={currentNeighborhood.memoryLayers}
-              lang={lang}
-            />
+            {/* Direct Photo-to-3D Upload & Gemini 4 Argon Synthesis Bar */}
+            <div className="bg-slate-900 text-white rounded-2xl p-3.5 border border-slate-800 flex items-center justify-between gap-2.5 shadow-sm">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <img
+                  src={activeNeighborhood.photos?.[0]?.url || activeNeighborhood.dioramaImageUrl}
+                  alt={activeNeighborhood.name}
+                  className="w-11 h-11 rounded-xl object-cover border border-indigo-500/40 shrink-0"
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-extrabold text-indigo-400 uppercase">
+                      GEMINI 4 ARGON PHOTO-TO-3D
+                    </span>
+                  </div>
+                  <p className="text-[12px] font-bold text-white truncate">
+                    {isGenerating3D
+                      ? generationStatus
+                      : lang === 'ko'
+                        ? '첨부한 사진의 구도·색감·건물을 3D 디오라마에 투영 중'
+                        : 'Projecting attached photo depth & buildings into 3D'}
+                  </p>
+                </div>
+              </div>
 
-            {/* 3. Sensory Metrics 2x2 Grid */}
-            <SensoryMetricsGrid
-              metrics={currentNeighborhood.metrics}
-              onMetricClick={handleMetricClick}
-              lang={lang}
-            />
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  disabled={isGenerating3D}
+                  onClick={() => quickPhotoInputRef.current?.click()}
+                  className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-extrabold flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-60"
+                >
+                  <span className="material-symbols-outlined text-[15px]">add_a_photo</span>
+                  <span>{lang === 'ko' ? '사진 바꿔서 3D 생성' : 'Photo → 3D'}</span>
+                </button>
+              </div>
+            </div>
 
-            {/* 4. Recorded Evidence Section (Audio + Photos) */}
-            <section className="flex flex-col gap-2.5">
-              <h2 className="text-[16px] font-bold text-[#191f28] tracking-tight px-1">
-                {lang === 'ko' ? '기록된 근거 메모' : 'Recorded Field Evidence'}
-              </h2>
+            {/* Objective Location Card: 6 Liquidity Pillars (환금성 6대 기준) */}
+            {activeNeighborhood.liquidity && (
+              <section className="bg-white rounded-2xl p-4 border border-[#edf0f3] shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-extrabold text-indigo-600 uppercase tracking-wider">
+                      OBJECTIVE LOCATION · 6 LIQUIDITY PILLARS
+                    </span>
+                    <h3 className="text-[15px] font-extrabold text-[#191f28]">
+                      {lang === 'ko'
+                        ? '객관적인 입지: 환금성 6대 기준'
+                        : 'Objective Location: 6 Liquidity Pillars'}
+                    </h3>
+                  </div>
+                  <div className="px-2.5 py-1 rounded-xl bg-slate-900 text-white text-[11px] font-extrabold">
+                    {lang === 'ko'
+                      ? `종합 ${activeNeighborhood.liquidity.grade} (${activeNeighborhood.liquidity.totalScore}점)`
+                      : `Grade ${activeNeighborhood.liquidity.grade} (${activeNeighborhood.liquidity.totalScore}pts)`}
+                  </div>
+                </div>
 
-              <AudioPlayerCard memo={currentNeighborhood.audioMemo} lang={lang} />
+                <div className="grid grid-cols-2 gap-2">
+                  {LIQUIDITY_PILLAR_META.map((pillar) => {
+                    const data = activeNeighborhood.liquidity![pillar.key];
+                    return (
+                      <div
+                        key={pillar.key}
+                        className="bg-[#f7f9fb] rounded-xl p-2.5 border border-[#edf0f3] flex flex-col gap-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-extrabold text-[#191f28] flex items-center gap-1">
+                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-extrabold flex items-center justify-center">
+                              {pillar.step}
+                            </span>
+                            <span>{lang === 'en' ? pillar.labelEn : pillar.labelKo}</span>
+                          </span>
+                          <span className="text-[11px] font-extrabold text-indigo-600">
+                            {data.score}점
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-bold text-slate-800 truncate">
+                          {lang === 'en' ? data.labelEn || data.label : data.labelKo || data.label}
+                        </div>
+                        <div className="text-[10px] text-[#8b95a1] truncate">
+                          {lang === 'en' ? data.detailEn || data.detail : data.detailKo || data.detail}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
-              <PhotoGalleryCard photos={currentNeighborhood.photos} lang={lang} />
+            {/* Subjective Sensory Memory Priority Chips */}
+            <section className="bg-white rounded-2xl p-4 border border-[#edf0f3] shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-extrabold text-[#191f28]">
+                  ✨ {lang === 'ko' ? '내가 중요하게 생각하는 감각기억' : 'My Chosen Sensory Priorities'}
+                </span>
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                  {lang === 'ko' ? '클릭하여 변경' : 'Tap to toggle'}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {SENSORY_PRIORITY_OPTIONS.map((opt) => {
+                  const active = selectedSensoryPriorities.includes(opt.id);
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => handleToggleSensoryPriority(opt.id)}
+                      className={`px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1 border transition-all cursor-pointer ${
+                        active
+                          ? 'bg-amber-500 text-white border-amber-600 shadow-2xs'
+                          : 'bg-[#f7f9fb] text-[#4e5968] border-[#edf0f3]'
+                      }`}
+                    >
+                      <span>{opt.icon}</span>
+                      <span>{lang === 'en' ? opt.labelEn : opt.labelKo}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </section>
-          </>
+
+            {/* Field Quote Card (Pingu / Gyodong) */}
+            <QuoteCard
+              quote={
+                lang === 'en' && activeNeighborhood.quoteEn
+                  ? activeNeighborhood.quoteEn
+                  : activeNeighborhood.quote
+              }
+              author={activeNeighborhood.quoteAuthor}
+              perspective={activeNeighborhood.perspective || 'pingu'}
+              onSwitchPerspective={(nextP) => {
+                setNeighborhoods((prev) =>
+                  prev.map((n) =>
+                    n.id === activeNeighborhood.id
+                      ? {
+                          ...n,
+                          perspective: nextP,
+                          quoteAuthor: nextP === 'gyodong' ? '교동' : '핑구',
+                        }
+                      : n
+                  )
+                );
+              }}
+              onEditClick={() => {
+                setRecordSubTab('capture');
+                setActiveTab('record');
+              }}
+              memoryLayers={activeNeighborhood.memoryLayers}
+              lang={lang}
+            />
+
+            {/* Sensory Metrics Grid */}
+            <SensoryMetricsGrid metrics={activeNeighborhood.metrics} lang={lang} />
+
+            {/* Field Photos Gallery */}
+            <PhotoGalleryCard photos={activeNeighborhood.photos} lang={lang} />
+          </div>
         )}
 
-        {activeTab === 'explore' && (
-          <ExploreView
-            neighborhoods={localizedNeighborhoods}
-            selectedId={selectedId}
-            compareIds={compareIds}
-            onSelectNeighborhood={handleSelectNeighborhood}
-            onToggleCompare={handleToggleCompare}
-            lang={lang}
-          />
-        )}
-
+        {/* TAB 3: COMPARE (동네비교 — 환금성 6대 기준 × 내가 고른 감각기억 1:1 대조) */}
         {activeTab === 'compare' && (
           <CompareView
-            neighborhoods={localizedNeighborhoods}
+            neighborhoods={neighborhoods}
             compareIds={compareIds}
             onToggleCompare={handleToggleCompare}
-            onSelectNeighborhood={handleSelectNeighborhood}
+            onSelectNeighborhood={(id) => {
+              setSelectedId(id);
+              setActiveTab('diorama');
+            }}
+            selectedSensoryPriorities={selectedSensoryPriorities}
+            onToggleSensoryPriority={handleToggleSensoryPriority}
             lang={lang}
           />
         )}
 
-        {activeTab === 'bookmarks' && (
-          <BookmarkView
-            neighborhoods={localizedNeighborhoods}
-            bookmarkedIds={bookmarkedIds}
-            onSelectNeighborhood={handleSelectNeighborhood}
-            onToggleBookmark={handleToggleBookmark}
-            lang={lang}
-          />
-        )}
+        {/* TAB 4: RECORD & BOOKMARKS (보관함 — 새 현장 기록/첨부 이미지 3D 변환 & 보관된 동네 목록) */}
+        {(activeTab === 'record' || activeTab === 'bookmarks') && (
+          <div className="flex flex-col gap-3">
+            {/* Sub-tab switcher inside the 4th menu */}
+            <div className="grid grid-cols-2 gap-1.5 bg-white p-1.5 rounded-2xl border border-[#edf0f3] shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setRecordSubTab('capture')}
+                className={`py-2 rounded-xl text-[12px] font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  recordSubTab === 'capture'
+                    ? 'bg-[#191f28] text-white shadow-xs'
+                    : 'text-[#8b95a1] hover:text-[#191f28]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">add_a_photo</span>
+                <span>
+                  {lang === 'ko' ? '현장 기록 · 사진 3D 변환' : 'Capture & Photo-to-3D'}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRecordSubTab('bookmarks')}
+                className={`py-2 rounded-xl text-[12px] font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  recordSubTab === 'bookmarks'
+                    ? 'bg-[#191f28] text-white shadow-xs'
+                    : 'text-[#8b95a1] hover:text-[#191f28]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">bookmarks</span>
+                <span>
+                  {lang === 'ko'
+                    ? `보관된 동네 (${bookmarkedIds.length})`
+                    : `Saved Quests (${bookmarkedIds.length})`}
+                </span>
+              </button>
+            </div>
 
-        {activeTab === 'record' && (
-          <RecordingView
-            neighborhood={currentNeighborhood}
-            startEmpty={startRecordEmpty}
-            onFinishToDiorama={() => setActiveTab('diorama')}
-            onSynthesizeWithGemini={handleSynthesizeWithGemini}
-            lang={lang}
-          />
+            {recordSubTab === 'capture' ? (
+              <RecordingView
+                neighborhood={activeNeighborhood}
+                selectedSensoryPriorities={selectedSensoryPriorities}
+                onToggleSensoryPriority={handleToggleSensoryPriority}
+                onFinishToDiorama={() => setActiveTab('diorama')}
+                onSynthesizeWithGemini={synthesizeNeighborhoodWithGemini4Argon}
+                lang={lang}
+              />
+            ) : (
+              <BookmarkView
+                neighborhoods={neighborhoods}
+                bookmarkedIds={bookmarkedIds}
+                onSelectNeighborhood={(id) => {
+                  setSelectedId(id);
+                  setActiveTab('diorama');
+                }}
+                onToggleBookmark={handleToggleBookmark}
+                lang={lang}
+              />
+            )}
+          </div>
         )}
       </main>
 
-      {/* Fixed Bottom Action Tray (Shown on Diorama view) */}
-      {activeTab === 'diorama' && (
-        <BottomActionTray
-          isInCompare={isInCompare}
-          compareCount={compareIds.length}
-          onToggleCompare={() => handleToggleCompare(selectedId)}
-          onOpenCalibration={() => setIsCalibrationOpen(true)}
-          lang={lang}
-        />
-      )}
-
-      {/* Bottom Tab Bar */}
+      {/* Original 4-Menu Bottom Navigation Bar (탐색 · 디오라마 · 동네비교 · 보관함) */}
       <BottomNav
         activeTab={activeTab}
-        onChangeTab={setActiveTab}
+        onChangeTab={(tab) => setActiveTab(tab)}
         compareCount={compareIds.length}
         bookmarkCount={bookmarkedIds.length}
-        lang={lang}
-      />
-
-      {/* 3D Calibration & Memory Edit Modal */}
-      <CalibrationModal
-        isOpen={isCalibrationOpen}
-        neighborhood={currentNeighborhood}
-        onClose={() => setIsCalibrationOpen(false)}
-        onSave={handleSaveCalibration}
         lang={lang}
       />
     </div>
@@ -624,3 +624,4 @@ export function App() {
 }
 
 export default App;
+
