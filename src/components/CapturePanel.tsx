@@ -8,13 +8,13 @@ import {
   Sparkles,
   Upload,
   Trash2,
-  Languages,
   Mountain,
   Trees,
   Train,
   Volume2,
   Loader2,
   RotateCcw,
+  Tag,
 } from 'lucide-react';
 
 interface CapturePanelProps {
@@ -32,6 +32,58 @@ interface CapturePanelProps {
   onGenerateWorld: () => void;
 }
 
+interface QuickWalkTag {
+  id: string;
+  labelKo: string;
+  labelEn: string;
+  snippetKo: string;
+  snippetEn: string;
+  patch: Partial<FieldObservationInput['quickRatings']>;
+}
+
+const QUICK_WALK_TAGS: QuickWalkTag[] = [
+  {
+    id: 'steep',
+    labelKo: '⛰️ 급경사 언덕',
+    labelEn: '⛰️ Steep Hill',
+    snippetKo: '역에서 단지 올라가는 언덕 경사가 꽤 가팔라서 계단과 엘리베이터가 필수예요.',
+    snippetEn: 'The hill climb from the station to the complex is quite steep with outdoor stairs.',
+    patch: { hillSteepness: 82 },
+  },
+  {
+    id: 'flat-subway',
+    labelKo: '🚇 평지 초역세권',
+    labelEn: '🚇 Flat Subway Walk',
+    snippetKo: '지하철역에서 아파트 정문까지 평지로 도보 4분 거리라 출퇴근이 정말 편해요.',
+    snippetEn: 'Flat 4-minute walk right from the subway exit to the main apartment gate.',
+    patch: { hillSteepness: 12, subwayWalkMinutes: 4 },
+  },
+  {
+    id: 'green-park',
+    labelKo: '🌳 숲세권·산책로',
+    labelEn: '🌳 Lush Park Trail',
+    snippetKo: '단지 조경과 바로 연결된 산책로에 나무가 울창해서 공기가 상쾌해요.',
+    snippetEn: 'Lush greenery and shaded walking trails connect directly to the apartment courtyard.',
+    patch: { parkGreenery: 92 },
+  },
+  {
+    id: 'quiet-zone',
+    labelKo: '🤫 조용한 단지 내부',
+    labelEn: '🤫 Quiet Courtyard',
+    snippetKo: '대로변과 떨어져 있어 낮에도 새소리만 들릴 정도로 조용하고 아늑합니다.',
+    snippetEn: 'Set back from the main road, the interior courtyard is super quiet and peaceful.',
+    patch: { trafficNoise: 24 },
+  },
+  {
+    id: 'noisy-road',
+    labelKo: '🔊 대로변 차소음',
+    labelEn: '🔊 Busy Road Noise',
+    snippetKo: '앞동은 왕복 대로변과 가까워서 출퇴근 시간 차량 소음이 꽤 들립니다.',
+    snippetEn: 'Front-row buildings face a busy avenue with noticeable traffic noise.',
+    patch: { trafficNoise: 74 },
+  },
+];
+
 export const CapturePanel: React.FC<CapturePanelProps> = ({
   selectedSpot,
   photos,
@@ -47,7 +99,8 @@ export const CapturePanel: React.FC<CapturePanelProps> = ({
   onGenerateWorld,
 }) => {
   const { lang, t } = useI18n();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const recognitionRef = useRef<any>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [speechStatus, setSpeechStatus] = useState<string | null>(null);
@@ -65,15 +118,26 @@ export const CapturePanel: React.FC<CapturePanelProps> = ({
             id: `upload-${Date.now()}-${idx}`,
             dataUrl,
             mimeType: file.type || 'image/jpeg',
-            caption: file.name.replace(/\.[^.]+$/, ''),
+            caption: file.name.replace(/\.[^.]+$/, '') || t('현장 촬영 사진', 'Field Photo'),
             tag: idx === 0 ? 'street' : idx === 1 ? 'apartment' : 'park',
           };
-          onChangePhotos([...photos.slice(0, 3), newPhoto]);
+          onChangePhotos([newPhoto, ...photos].slice(0, 3));
         }
       };
       reader.readAsDataURL(file);
     });
     e.target.value = '';
+  };
+
+  const handleApplyWalkTag = (tag: QuickWalkTag) => {
+    onChangeRatings({
+      ...quickRatings,
+      ...tag.patch,
+    });
+    const snippet = lang === 'ko' ? tag.snippetKo : tag.snippetEn;
+    if (!voiceNoteText.includes(snippet)) {
+      onChangeVoiceNote(voiceNoteText ? `${voiceNoteText.trim()} ${snippet}` : snippet);
+    }
   };
 
   const handleToggleVoiceRecording = () => {
@@ -111,8 +175,8 @@ export const CapturePanel: React.FC<CapturePanelProps> = ({
         setIsRecording(true);
         setSpeechStatus(
           voiceLanguage === 'ko-KR'
-            ? '한국어 음성 인식 중... (언덕, 공원, 역세권, 소음 등을 말씀해 주세요)'
-            : 'Listening in English (Describe hills, parks, subway, or noise)...'
+            ? '걸으면서 동네 인상을 편하게 말씀해 주세요...'
+            : 'Walk & speak freely about hills, parks, subway, or noise...'
         );
       };
 
@@ -130,8 +194,8 @@ export const CapturePanel: React.FC<CapturePanelProps> = ({
         setIsRecording(false);
         setSpeechStatus(
           t(
-            '음성 입력이 종료되었습니다 — 직접 입력하거나 샘플 메모를 선택해 주세요.',
-            'Speech input ended — you can type or click a sample note below.'
+            '음성 입력이 종료되었습니다 — 아래 원터치 태그를 눌러보세요.',
+            'Speech input ended — tap a 1-thumb tag below.'
           )
         );
         setTimeout(() => setSpeechStatus(null), 3500);
@@ -150,60 +214,91 @@ export const CapturePanel: React.FC<CapturePanelProps> = ({
   };
 
   return (
-    <div className="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
+    <div className="bg-white border border-slate-200/90 rounded-3xl p-3.5 sm:p-4 shadow-2xs flex flex-col gap-3.5">
+      {/* Mobile Field Recorder Header + Big Camera/Mic Action Strip */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
           <span className="w-9 h-9 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
             <Camera className="w-4.5 h-4.5" />
           </span>
-          <div>
-            <h2 className="font-display font-extrabold text-sm sm:text-base text-slate-900">
-              {t('임장 사진 & 음성 기록', 'Capture Photos & Voice Impression')}
+          <div className="min-w-0">
+            <h2 className="font-display font-extrabold text-sm text-slate-900 truncate">
+              {t('모바일 현장 임장 기록기', 'On-the-Go Field Recorder')}
             </h2>
-            <p className="text-xs text-slate-500">
-              {lang === 'ko' ? `${selectedSpot.nameKo} (${selectedSpot.name})` : selectedSpot.name} ·{' '}
-              {t('Gemini 4 Argon 멀티모달 3D 생성', 'Gemini 4 Argon Multimodal 3D Synthesis')}
+            <p className="text-[11px] text-slate-500 truncate">
+              {lang === 'ko' ? `${selectedSpot.nameKo} · 걸으면서 사진·음성 캡처` : `${selectedSpot.name} · Walk & Capture`}
             </p>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={onLoadPresetPhotos}
+          className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1 shrink-0 cursor-pointer"
+        >
+          <RotateCcw className="w-3 h-3" />
+          <span>{t('샘플복원', 'Preset')}</span>
+        </button>
       </div>
 
-      {/* Field Photos Section */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-700">
-            {t(`현장 사진 (${photos.length}/3)`, `Visit Photos (${photos.length}/3)`)}
-          </span>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={onLoadPresetPhotos}
-              className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1 cursor-pointer"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>{t('기본 사진', 'Preset')}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition flex items-center gap-1 cursor-pointer"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              <span>{t('사진 업로드', 'Upload')}</span>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-          </div>
+      {/* Big Thumb-Friendly Mobile Action Buttons: Direct Camera + Live Voice Mic */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => cameraInputRef.current?.click()}
+          className="py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-display font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition cursor-pointer"
+        >
+          <Camera className="w-4 h-4" />
+          <span>{t('📸 현장 카메라 촬영', '📸 Snap Camera')}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleToggleVoiceRecording}
+          className={`py-2.5 px-3 rounded-2xl font-display font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-[0.98] cursor-pointer ${
+            isRecording
+              ? 'bg-rose-600 text-white animate-pulse'
+              : 'bg-orange-500 hover:bg-orange-600 text-white'
+          }`}
+        >
+          {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          <span>{isRecording ? t('⏹️ 녹음 중지', '⏹️ Stop Mic') : t('🎙️ 걸으며 음성메모', '🎙️ Voice Note')}</span>
+        </button>
+
+        {/* Hidden input for Mobile Rear Camera (capture="environment") */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+        {/* Hidden input for Photo Gallery */}
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+      </div>
+
+      {/* Photo Thumbnails Strip */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
+          <span>{t(`촬영된 현장 사진 (${photos.length}/3)`, `Captured Photos (${photos.length}/3)`)}</span>
+          <button
+            type="button"
+            onClick={() => galleryInputRef.current?.click()}
+            className="text-emerald-700 hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <Upload className="w-3 h-3" />
+            <span>{t('앨범에서 추가', 'Add from Gallery')}</span>
+          </button>
         </div>
 
-        {/* Photo Thumbnails Grid */}
         <div className="grid grid-cols-3 gap-2">
           {photos.map((photo) => (
             <div
@@ -219,11 +314,11 @@ export const CapturePanel: React.FC<CapturePanelProps> = ({
                 type="button"
                 onClick={() => onChangePhotos(photos.filter((p) => p.id !== photo.id))}
                 title={t('사진 삭제', 'Remove photo')}
-                className="absolute top-1.5 right-1.5 p-1 rounded-lg bg-black/60 text-white opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                className="absolute top-1 right-1 p-1 rounded-lg bg-black/60 text-white opacity-85 sm:opacity-0 group-hover:opacity-100 transition cursor-pointer"
               >
                 <Trash2 className="w-3 h-3" />
               </button>
-              <div className="absolute bottom-0 inset-x-0 bg-black/65 text-white text-[10px] font-semibold px-2 py-1 truncate">
+              <div className="absolute bottom-0 inset-x-0 bg-black/65 text-white text-[10px] font-semibold px-1.5 py-0.5 truncate">
                 {photo.caption}
               </div>
             </div>
@@ -231,59 +326,52 @@ export const CapturePanel: React.FC<CapturePanelProps> = ({
         </div>
       </div>
 
-      {/* Voice & Text Impression Recorder */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between flex-wrap gap-1.5">
-          <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
-            <Languages className="w-3.5 h-3.5 text-orange-600" />
-            {t('음성 / 텍스트 메모 (한국어 🇰🇷 & 영어 🇺🇸)', 'Voice / Text Note (KR 🇰🇷 & EN 🇺🇸)')}
+      {/* One-Thumb Field Tag Chips (For walking around without typing!) */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+            <Tag className="w-3 h-3 text-emerald-700" />
+            {t('원터치 현장 체감 태그 (터치 시 자동 반영)', '1-Thumb Walk Tags (Auto-fills note & sliders)')}
           </span>
-
-          <div className="flex items-center gap-1.5">
-            <div className="inline-flex rounded-xl bg-slate-100 p-0.5 text-[11px] font-bold">
-              <button
-                type="button"
-                onClick={() => {
-                  onChangeVoiceLanguage('ko-KR');
-                  onChangeVoiceNote(selectedSpot.sampleVoiceNoteKo);
-                }}
-                className={`px-2 py-0.5 rounded-lg transition cursor-pointer ${
-                  voiceLanguage === 'ko-KR'
-                    ? 'bg-slate-900 text-white'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                🇰🇷 KO
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onChangeVoiceLanguage('en-US');
-                  onChangeVoiceNote(selectedSpot.sampleVoiceNoteEn);
-                }}
-                className={`px-2 py-0.5 rounded-lg transition cursor-pointer ${
-                  voiceLanguage === 'en-US'
-                    ? 'bg-slate-900 text-white'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                🇺🇸 EN
-              </button>
-            </div>
-
+          <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-[10px] font-bold">
             <button
               type="button"
-              onClick={handleToggleVoiceRecording}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
-                isRecording
-                  ? 'bg-rose-600 text-white animate-pulse'
-                  : 'bg-orange-50 text-orange-800 border border-orange-200 hover:bg-orange-100'
+              onClick={() => {
+                onChangeVoiceLanguage('ko-KR');
+                onChangeVoiceNote(selectedSpot.sampleVoiceNoteKo);
+              }}
+              className={`px-1.5 py-0.5 rounded-md transition cursor-pointer ${
+                voiceLanguage === 'ko-KR' ? 'bg-slate-900 text-white' : 'text-slate-600'
               }`}
             >
-              {isRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-              <span>{isRecording ? t('중지', 'Stop') : t('음성녹음', 'Mic')}</span>
+              KO
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onChangeVoiceLanguage('en-US');
+                onChangeVoiceNote(selectedSpot.sampleVoiceNoteEn);
+              }}
+              className={`px-1.5 py-0.5 rounded-md transition cursor-pointer ${
+                voiceLanguage === 'en-US' ? 'bg-slate-900 text-white' : 'text-slate-600'
+              }`}
+            >
+              EN
             </button>
           </div>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          {QUICK_WALK_TAGS.map((tag) => (
+            <button
+              key={tag.id}
+              type="button"
+              onClick={() => handleApplyWalkTag(tag)}
+              className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 active:scale-95 text-slate-700 border border-slate-200/80 transition cursor-pointer"
+            >
+              {lang === 'ko' ? tag.labelKo : tag.labelEn}
+            </button>
+          ))}
         </div>
 
         {speechStatus && (
@@ -293,19 +381,19 @@ export const CapturePanel: React.FC<CapturePanelProps> = ({
         )}
 
         <textarea
-          rows={3}
+          rows={2}
           value={voiceNoteText}
           onChange={(e) => onChangeVoiceNote(e.target.value)}
           placeholder={t(
-            '언덕 경사, 공원 녹지, 지하철 도보 거리, 도로 소음 등을 한국어나 영어로 적어주세요...',
-            'Describe hills, parks, subway walk, or traffic noise in Korean or English...'
+            '걸으면서 느낀 언덕 경사, 공원 녹지, 지하철 거리, 소음을 기록하세요...',
+            'Record hills, parks, subway walk, or traffic noise while walking...'
           )}
           className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-slate-900 leading-relaxed"
         />
       </div>
 
       {/* Quick Environmental Sensor Sliders */}
-      <div className="grid grid-cols-2 gap-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl p-3">
+      <div className="grid grid-cols-2 gap-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl p-2.5">
         <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-700">
           <span className="flex items-center justify-between">
             <span className="flex items-center gap-1">
@@ -406,7 +494,7 @@ export const CapturePanel: React.FC<CapturePanelProps> = ({
           <>
             <Sparkles className="w-4 h-4 text-amber-300" />
             <span>
-              {t('3D 메모리 생성 & 스탬프 획득하기', 'Generate 3D Memory & Earn Stamp')}
+              {t('✨ 3D 동네 메모리 생성 & 스탬프 찍기', '✨ Generate 3D Memory & Earn Stamp')}
             </span>
           </>
         )}

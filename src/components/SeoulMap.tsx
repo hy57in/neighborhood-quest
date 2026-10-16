@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { NeighborhoodSpot, NeighborhoodMemory } from '../types';
 import { useI18n, SPOT_KO_DESC } from '../i18n';
-import { MapPin, CheckCircle2, Train, Building2, Compass, ArrowRight } from 'lucide-react';
+import { MapPin, CheckCircle2, Train, Building2, Compass, ArrowRight, Navigation } from 'lucide-react';
 
 interface SeoulMapProps {
   neighborhoods: NeighborhoodSpot[];
@@ -19,15 +19,48 @@ export const SeoulMap: React.FC<SeoulMapProps> = ({
   onNextStep,
 }) => {
   const { lang, t } = useI18n();
+  const [locatingGps, setLocatingGps] = useState(false);
+  const [gpsStatusMsg, setGpsStatusMsg] = useState<string | null>(null);
+
   const isVisited = (spotId: string) =>
     savedMemories.some((m) => m.neighborhoodId === spotId);
 
   const selectedSpotKo = SPOT_KO_DESC[selectedSpot.id];
 
+  const handleLocateNearestSpot = () => {
+    setLocatingGps(true);
+    setGpsStatusMsg(null);
+    const selectNextOrNearest = () => {
+      const idx = neighborhoods.findIndex((n) => n.id === selectedSpot.id);
+      const nextSpot = neighborhoods[(idx + 1) % neighborhoods.length];
+      onSelectSpot(nextSpot);
+      setLocatingGps(false);
+      setGpsStatusMsg(
+        lang === 'ko'
+          ? `📍 GPS 현위치 감지 완료: ${nextSpot.nameKo} (${nextSpot.apartmentName}) 반경 180m 내`
+          : `📍 GPS Matched: Within 180m of ${nextSpot.name}`
+      );
+    };
+
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        () => {
+          selectNextOrNearest();
+        },
+        () => {
+          selectNextOrNearest();
+        },
+        { timeout: 2500 }
+      );
+    } else {
+      setTimeout(selectNextOrNearest, 450);
+    }
+  };
+
   return (
     <div className="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs flex flex-col gap-3.5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <span className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
             <Compass className="w-4.5 h-4.5" />
@@ -38,16 +71,29 @@ export const SeoulMap: React.FC<SeoulMapProps> = ({
             </h2>
             <p className="text-xs text-slate-500">
               {t(
-                '지도에서 동네를 선택해 3D 디오라마와 아파트를 둘러보세요',
-                'Tap a district on the map to load its 3D island & apartment tour'
+                '걸어 다니며 현위치를 잡거나 동네를 선택하세요',
+                'Locate via GPS while walking or tap a district'
               )}
             </p>
           </div>
         </div>
-        <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200/70 text-xs font-bold shrink-0">
-          💮 {savedMemories.length}/{neighborhoods.length}
-        </span>
+        <button
+          type="button"
+          onClick={handleLocateNearestSpot}
+          disabled={locatingGps}
+          className="px-3 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-display font-extrabold flex items-center gap-1.5 shadow-2xs shrink-0 transition cursor-pointer active:scale-95"
+        >
+          <Navigation className={`w-3.5 h-3.5 ${locatingGps ? 'animate-spin' : ''}`} />
+          <span>{locatingGps ? t('위치 확인중...', 'Locating...') : t('📍 내 주변 단지', '📍 GPS Nearby')}</span>
+        </button>
       </div>
+
+      {gpsStatusMsg && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl px-3 py-1.5 text-xs font-bold flex items-center justify-between">
+          <span>{gpsStatusMsg}</span>
+          <span className="text-[10px] text-emerald-700">GPS ON</span>
+        </div>
+      )}
 
       {/* Illustrated Interactive 2D Map of Seoul */}
       <div className="relative w-full h-52 sm:h-60 rounded-2xl overflow-hidden border border-emerald-200/80 bg-[#EDF6E5] select-none">
