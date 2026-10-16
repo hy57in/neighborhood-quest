@@ -3,6 +3,9 @@
 **Capture Freely. Remember Vividly.**  
 > **Turn your real-world neighborhood experiences into playful, explorable 3D memories powered by Gemini 4 Argon.**
 
+🌐 **Live Demo (Google Cloud Run — `asia-northeast3`)**: **[https://neighborhood-quest-866062064970.asia-northeast3.run.app](https://neighborhood-quest-866062064970.asia-northeast3.run.app)**  
+📦 **GitHub Repository**: **[https://github.com/hy57in/neighborhood-quest](https://github.com/hy57in/neighborhood-quest)**
+
 ---
 
 ## 1. Product Vision
