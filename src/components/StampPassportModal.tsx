@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import type { NeighborhoodMemory, NeighborhoodSpot } from '../types';
+import { useI18n, SPOT_KO_DESC } from '../i18n';
 import { Award, CheckCircle2, Lock, Sparkles, X } from 'lucide-react';
 
 interface StampPassportModalProps {
@@ -17,6 +18,7 @@ export const StampPassportModal: React.FC<StampPassportModalProps> = ({
   savedMemories,
   onLoadMemory,
 }) => {
+  const { lang, t } = useI18n();
   const dialogRef = useRef<HTMLDialogElement | null>(null);
 
   useEffect(() => {
@@ -30,7 +32,6 @@ export const StampPassportModal: React.FC<StampPassportModalProps> = ({
     }
   }, [isOpen]);
 
-  // Modern Web Guidance: click-outside light-dismiss fallback for browsers without closedBy
   const handleDialogClick = (e: React.MouseEvent<HTMLDialogElement>) => {
     if (e.target === dialogRef.current) {
       onClose();
@@ -62,21 +63,24 @@ export const StampPassportModal: React.FC<StampPassportModalProps> = ({
       aria-labelledby="passport-dialog-title"
       onClose={onClose}
       onClick={handleDialogClick}
-      className="m-auto w-full max-w-2xl rounded-3xl border-4 border-[#E6D5B8] bg-[#FFF8F0] p-0 text-[#2F3E46] shadow-2xl backdrop:bg-black/45 backdrop:backdrop-blur-xs"
+      className="m-auto w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-black/45 backdrop:backdrop-blur-xs"
     >
       <div className="p-6 flex flex-col gap-5">
         {/* Header */}
-        <div className="flex items-center justify-between border-b-2 border-[#E6D5B8] pb-4">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-2xl bg-[#FFD166] text-[#5C3D00] flex items-center justify-center shadow-xs">
+            <span className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center shadow-2xs">
               <Award className="w-6 h-6" />
             </span>
             <div>
-              <h2 id="passport-dialog-title" className="font-display font-extrabold text-xl text-[#2F3E46]">
-                Seoul Explorer Stamp Passport
+              <h2 id="passport-dialog-title" className="font-display font-extrabold text-lg sm:text-xl text-slate-900">
+                {t('서울 동네 탐험 스탬프 여권', 'Seoul Explorer Stamp Passport')}
               </h2>
-              <p className="text-xs text-[#6B705C]">
-                Collect interactive 3D neighborhood stamps as you visit apartments across Seoul ({savedMemories.length}/{neighborhoods.length} collected)
+              <p className="text-xs text-slate-500">
+                {t(
+                  `서울 아파트를 방문하고 3D 메모리를 생성해 동네 스탬프를 수집하세요 (${savedMemories.length}/${neighborhoods.length} 수집 완료)`,
+                  `Collect interactive 3D neighborhood stamps as you visit apartments across Seoul (${savedMemories.length}/${neighborhoods.length} collected)`
+                )}
               </p>
             </div>
           </div>
@@ -84,7 +88,7 @@ export const StampPassportModal: React.FC<StampPassportModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close Stamp Passport"
-            className="p-2 rounded-2xl bg-white border border-[#E6D5B8] hover:bg-[#F4EAE0] transition"
+            className="p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -94,13 +98,14 @@ export const StampPassportModal: React.FC<StampPassportModalProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {neighborhoods.map((spot) => {
             const memory = savedMemories.find((m) => m.neighborhoodId === spot.id);
+            const koSpot = SPOT_KO_DESC[spot.id];
             return (
               <div
                 key={spot.id}
                 className={`rounded-2xl p-4 border-2 transition flex items-center justify-between gap-3 ${
                   memory
-                    ? 'bg-white border-[#95D5B2] shadow-sm'
-                    : 'bg-[#F4EAE0]/60 border-dashed border-[#D4C5B1] opacity-75'
+                    ? 'bg-white border-emerald-300 shadow-2xs'
+                    : 'bg-slate-50 border-dashed border-slate-200 opacity-75'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -109,7 +114,7 @@ export const StampPassportModal: React.FC<StampPassportModalProps> = ({
                     className={`w-14 h-14 rounded-full flex flex-col items-center justify-center border-4 shrink-0 ${
                       memory
                         ? 'border-double shadow-inner rotate-[-6deg]'
-                        : 'border-[#D4C5B1] bg-[#E8DEC8]/50 text-[#8D99AE]'
+                        : 'border-slate-200 bg-slate-100 text-slate-400'
                     }`}
                     style={
                       memory
@@ -125,8 +130,8 @@ export const StampPassportModal: React.FC<StampPassportModalProps> = ({
                         <span className="text-xl leading-none">
                           {getIconEmoji(memory.blueprint.stamp.stampIcon)}
                         </span>
-                        <span className="text-[9px] font-extrabold uppercase tracking-tighter text-[#E07A5F] mt-0.5">
-                          STAMPED
+                        <span className="text-[9px] font-extrabold uppercase tracking-tighter text-orange-600 mt-0.5">
+                          {t('인증완료', 'STAMPED')}
                         </span>
                       </>
                     ) : (
@@ -136,23 +141,26 @@ export const StampPassportModal: React.FC<StampPassportModalProps> = ({
 
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <h3 className="font-display font-bold text-sm text-[#2F3E46]">
-                        {spot.name}
+                      <h3 className="font-display font-bold text-sm text-slate-900">
+                        {lang === 'ko' ? `${spot.nameKo} (${spot.name.split(' ')[0]})` : spot.name}
                       </h3>
                       {memory && (
-                        <CheckCircle2 className="w-4 h-4 text-[#2D6A4F] shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
                       )}
                     </div>
-                    <p className="text-xs text-[#6B705C] font-semibold">
-                      {spot.apartmentName}
+                    <p className="text-xs text-slate-500 font-semibold">
+                      {lang === 'ko' && koSpot ? koSpot.apartmentNameKo : spot.apartmentName}
                     </p>
                     {memory ? (
-                      <p className="text-[11px] font-bold text-[#E07A5F] mt-1">
+                      <p className="text-[11px] font-bold text-orange-700 mt-1">
                         “{memory.blueprint.stamp.motto}”
                       </p>
                     ) : (
-                      <p className="text-[11px] text-[#8D99AE] mt-1">
-                        Visit & generate a 3D memory to unlock stamp
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        {t(
+                          '방문 기록 후 3D 메모리를 생성하면 스탬프가 열립니다',
+                          'Visit & generate a 3D memory to unlock stamp'
+                        )}
                       </p>
                     )}
                   </div>
@@ -165,10 +173,10 @@ export const StampPassportModal: React.FC<StampPassportModalProps> = ({
                       onLoadMemory(memory);
                       onClose();
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-[#D8F3DC] hover:bg-[#B7E4C7] text-[#1B4332] text-xs font-bold shrink-0 flex items-center gap-1 transition cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold shrink-0 flex items-center gap-1 transition cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    View 3D
+                    {t('3D 보기', 'View 3D')}
                   </button>
                 )}
               </div>

@@ -17,6 +17,7 @@ import type {
   ObservationPinSpec,
   PolicyAnalysisResult,
 } from './types';
+import { useI18n } from './i18n';
 import { SeoulMap } from './components/SeoulMap';
 import { CapturePanel } from './components/CapturePanel';
 import { World3DDiorama } from './components/World3DDiorama';
@@ -39,6 +40,7 @@ import {
 type ActiveTab = 'explore' | 'capture' | 'policy' | 'verify';
 
 export const App: React.FC = () => {
+  const { lang, setLang, t } = useI18n();
   const [activeTab, setActiveTab] = useState<ActiveTab>('policy');
   const [selectedSpot, setSelectedSpot] = useState<NeighborhoodSpot>(SEOUL_NEIGHBORHOODS[0]);
   const [photos, setPhotos] = useState<PhotoInput[]>([]);
@@ -144,7 +146,9 @@ export const App: React.FC = () => {
 
       setActiveTab('verify');
       setStampBanner(
-        `💮 Stamp Unlocked: "${data.blueprint.stamp.badgeTitle}" (${data.verification.overallFidelityScore}% Verified)`
+        lang === 'ko'
+          ? `💮 새 스탬프 획득: "${data.blueprint.stamp.badgeTitle}" (Gemini 4 Argon 검증 ${data.verification.overallFidelityScore}%)`
+          : `💮 Stamp Unlocked: "${data.blueprint.stamp.badgeTitle}" (${data.verification.overallFidelityScore}% Verified)`
       );
       setTimeout(() => setStampBanner(null), 5000);
     } catch (err) {
@@ -185,7 +189,9 @@ export const App: React.FC = () => {
     setPendingPolicy(null);
     const unlockedCount = pendingPolicy.npcOutcomes.filter((o) => o.canBuyHome).length;
     setStampBanner(
-      `🏛️ Applied to 3D World: "${pendingPolicy.policyTitleEn}" (${unlockedCount}/2 Residents Unlocked Home!)`
+      lang === 'ko'
+        ? `🏛️ 3D 마을에 정책 반영 완료: "${pendingPolicy.policyTitleEn}" (주민 ${unlockedCount}/2명 내집마련 성공!)`
+        : `🏛️ Applied to 3D World: "${pendingPolicy.policyTitleEn}" (${unlockedCount}/2 Residents Unlocked Home!)`
     );
     setTimeout(() => setStampBanner(null), 5000);
   };
@@ -220,34 +226,29 @@ export const App: React.FC = () => {
 
   const tabs: Array<{
     id: ActiveTab;
-    label: string;
     shortLabel: string;
     icon: React.ReactNode;
     badge?: string;
   }> = [
     {
       id: 'explore',
-      label: '1. Seoul Map',
-      shortLabel: 'Map',
+      shortLabel: t('지도 탐색', 'Map'),
       icon: <Compass className="w-4 h-4" />,
     },
     {
       id: 'capture',
-      label: '2. Capture',
-      shortLabel: 'Capture',
+      shortLabel: t('임장 기록', 'Capture'),
       icon: <Camera className="w-4 h-4" />,
     },
     {
       id: 'policy',
-      label: '3. Pingu & Gyodong',
-      shortLabel: 'Policy',
+      shortLabel: t('정책 퀘스트', 'Policy'),
       icon: <Landmark className="w-4 h-4" />,
       badge: pendingPolicy ? '!' : undefined,
     },
     {
       id: 'verify',
-      label: '4. AI Verify',
-      shortLabel: 'Verify',
+      shortLabel: t('AI 검증', 'Verify'),
       icon: <ShieldCheck className="w-4 h-4" />,
       badge: `${activeVerification.overallFidelityScore}%`,
     },
@@ -271,20 +272,53 @@ export const App: React.FC = () => {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="font-display font-extrabold text-sm sm:text-lg text-slate-900 truncate">
-                  Neighborhood & Policy Quest
+                  {t('동네 & 정책 퀘스트', 'Neighborhood & Policy Quest')}
                 </h1>
                 <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-900 text-amber-300">
                   Gemini 4 Argon
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 truncate hidden sm:block">
-                Explore 3D Seoul islands with Pingu (핑구) & Gyodong (교동)
+                {t(
+                  '핑구(Pingu) · 교동(Gyodong)과 함께하는 3D 서울 임장 & 부동산 정책 시뮬레이터',
+                  'Explore 3D Seoul islands with Pingu (핑구) & Gyodong (교동)'
+                )}
               </p>
             </div>
           </div>
 
-          {/* Right Utility Actions */}
+          {/* Right Utility Actions + KO/EN Language Switcher */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* KO / EN Language Toggle Pill */}
+            <div
+              className="inline-flex items-center rounded-full bg-slate-100 p-0.5 border border-slate-200 text-xs font-display font-extrabold"
+              role="group"
+              aria-label="Language Switcher"
+            >
+              <button
+                type="button"
+                onClick={() => setLang('ko')}
+                className={`px-2.5 py-1 rounded-full transition cursor-pointer ${
+                  lang === 'ko'
+                    ? 'bg-slate-900 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                🇰🇷 KO
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang('en')}
+                className={`px-2.5 py-1 rounded-full transition cursor-pointer ${
+                  lang === 'en'
+                    ? 'bg-slate-900 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                🇺🇸 EN
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={() => setIsPassportOpen(true)}
@@ -292,7 +326,7 @@ export const App: React.FC = () => {
             >
               <Award className="w-3.5 h-3.5" />
               <span>
-                Stamps ({savedMemories.length}/{SEOUL_NEIGHBORHOODS.length})
+                {t('스탬프', 'Stamps')} ({savedMemories.length}/{SEOUL_NEIGHBORHOODS.length})
               </span>
             </button>
 
@@ -302,7 +336,7 @@ export const App: React.FC = () => {
               className="px-2.5 sm:px-3.5 py-1.5 rounded-full font-display font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 flex items-center gap-1.5 transition cursor-pointer"
             >
               <Scale className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Compare</span>
+              <span className="hidden sm:inline">{t('동네 비교', 'Compare')}</span>
             </button>
           </div>
         </div>
@@ -325,7 +359,7 @@ export const App: React.FC = () => {
             <div className="flex items-center justify-between gap-2 bg-white border border-slate-200/80 rounded-2xl px-3 py-2 shadow-2xs overflow-x-auto no-scrollbar">
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-[11px] font-display font-bold text-slate-400 uppercase tracking-wider mr-1">
-                  3D Islands:
+                  {t('저장된 3D 섬:', '3D Islands:')}
                 </span>
                 {savedMemories.map((mem) => {
                   const isCurrent = mem.blueprint.worldTitle === activeBlueprint.worldTitle;
@@ -341,7 +375,9 @@ export const App: React.FC = () => {
                       }`}
                     >
                       <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                      <span>{mem.neighborhoodName.split(' ')[0]}</span>
+                      <span>
+                        {lang === 'ko' ? mem.neighborhoodNameKo : mem.neighborhoodName.split(' ')[0]}
+                      </span>
                       <span className="text-[10px] opacity-75">
                         {mem.blueprint.livabilityMetrics.overallGrade}
                       </span>
@@ -350,11 +386,11 @@ export const App: React.FC = () => {
                 })}
               </div>
               <span className="hidden sm:inline text-[11px] font-semibold text-slate-500 shrink-0">
-                Tap 🐧 핑구 or 🐶 교동 in 3D
+                {t('3D 섬의 🐧핑구 · 🐶교동이를 클릭해보세요!', 'Tap 🐧 Pingu or 🐶 Gyodong in 3D')}
               </span>
             </div>
 
-            {/* 3D Diorama Canvas Container (Responsive height for Mobile & Desktop) */}
+            {/* 3D Diorama Canvas Container */}
             <div className="h-[360px] sm:h-[480px] lg:h-[560px]">
               <World3DDiorama
                 blueprint={activeBlueprint}
@@ -404,7 +440,7 @@ export const App: React.FC = () => {
               })}
             </div>
 
-            {/* Active Step Content (Only 1 focused card view rendered at a time!) */}
+            {/* Active Step Content */}
             {activeTab === 'explore' && (
               <SeoulMap
                 neighborhoods={SEOUL_NEIGHBORHOODS}
@@ -435,6 +471,7 @@ export const App: React.FC = () => {
             {activeTab === 'policy' && (
               <PolicyQuestPanel
                 neighborhoodName={selectedSpot.name}
+                neighborhoodNameKo={selectedSpot.nameKo}
                 starterHomePriceMillionKRW={selectedSpot.starterHomePriceMillionKRW}
                 npcs={VILLAGE_NPCS}
                 presets={POLICY_PRESETS}

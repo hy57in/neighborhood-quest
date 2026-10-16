@@ -1,5 +1,6 @@
 import React from 'react';
 import type { NeighborhoodSpot, NeighborhoodMemory } from '../types';
+import { useI18n, SPOT_KO_DESC } from '../i18n';
 import { MapPin, CheckCircle2, Train, Building2, Compass, ArrowRight } from 'lucide-react';
 
 interface SeoulMapProps {
@@ -17,8 +18,11 @@ export const SeoulMap: React.FC<SeoulMapProps> = ({
   onSelectSpot,
   onNextStep,
 }) => {
+  const { lang, t } = useI18n();
   const isVisited = (spotId: string) =>
     savedMemories.some((m) => m.neighborhoodId === spotId);
+
+  const selectedSpotKo = SPOT_KO_DESC[selectedSpot.id];
 
   return (
     <div className="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs flex flex-col gap-3.5">
@@ -30,10 +34,13 @@ export const SeoulMap: React.FC<SeoulMapProps> = ({
           </span>
           <div>
             <h2 className="font-display font-extrabold text-sm sm:text-base text-slate-900">
-              Explore Seoul Neighborhoods
+              {t('서울 동네 지도 탐색', 'Explore Seoul Neighborhoods')}
             </h2>
             <p className="text-xs text-slate-500">
-              Tap a district on the map to load its 3D island & apartment tour
+              {t(
+                '지도에서 동네를 선택해 3D 디오라마와 아파트를 둘러보세요',
+                'Tap a district on the map to load its 3D island & apartment tour'
+              )}
             </p>
           </div>
         </div>
@@ -123,22 +130,22 @@ export const SeoulMap: React.FC<SeoulMapProps> = ({
 
           {/* District Labels */}
           <text x="115" y="78" fill="#52606D" fontSize="10" fontWeight="700" opacity="0.75">
-            MAPO-GU
+            {lang === 'ko' ? '마포구' : 'MAPO-GU'}
           </text>
           <text x="230" y="88" fill="#52606D" fontSize="10" fontWeight="700" opacity="0.75">
-            YONGSAN 🗼
+            {lang === 'ko' ? '용산구 🗼' : 'YONGSAN 🗼'}
           </text>
           <text x="310" y="96" fill="#52606D" fontSize="10" fontWeight="700" opacity="0.75">
-            SEONGDONG-GU
+            {lang === 'ko' ? '성동구' : 'SEONGDONG-GU'}
           </text>
           <text x="265" y="218" fill="#52606D" fontSize="10" fontWeight="700" opacity="0.75">
-            GANGNAM-GU
+            {lang === 'ko' ? '강남구' : 'GANGNAM-GU'}
           </text>
           <text x="375" y="225" fill="#52606D" fontSize="10" fontWeight="700" opacity="0.75">
-            SONGPA-GU
+            {lang === 'ko' ? '송파구' : 'SONGPA-GU'}
           </text>
           <text x="220" y="154" fill="#0077B6" fontSize="10" fontWeight="800" opacity="0.85">
-            HAN RIVER (한강)
+            {lang === 'ko' ? '한강 (HAN RIVER)' : 'HAN RIVER (한강)'}
           </text>
         </svg>
 
@@ -174,7 +181,9 @@ export const SeoulMap: React.FC<SeoulMapProps> = ({
                 ) : (
                   <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                 )}
-                <span className="whitespace-nowrap">{spot.name.split(' ')[0]}</span>
+                <span className="whitespace-nowrap">
+                  {lang === 'ko' ? spot.nameKo : spot.name.split(' ')[0]}
+                </span>
               </div>
             </button>
           );
@@ -197,8 +206,10 @@ export const SeoulMap: React.FC<SeoulMapProps> = ({
                   : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
               }`}
             >
-              <span>{spot.name.split(' ')[0]}</span>
-              <span className="text-[10px] opacity-75">{spot.nameKo}</span>
+              <span>{lang === 'ko' ? spot.nameKo : spot.name.split(' ')[0]}</span>
+              <span className="text-[10px] opacity-75">
+                {lang === 'ko' ? spot.name.split(' ')[0] : spot.nameKo}
+              </span>
               {visited && <span title="Stamped!">💮</span>}
             </button>
           );
@@ -212,13 +223,17 @@ export const SeoulMap: React.FC<SeoulMapProps> = ({
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-display font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
                 <Building2 className="w-4 h-4 text-emerald-700" />
-                {selectedSpot.apartmentName}
+                {lang === 'ko' && selectedSpotKo
+                  ? selectedSpotKo.apartmentNameKo
+                  : selectedSpot.apartmentName}
               </span>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">
-                Starter Home ₩{selectedSpot.starterHomePriceMillionKRW}M
+                {t('목표 매매가', 'Starter Home')} ₩{selectedSpot.starterHomePriceMillionKRW}M
               </span>
             </div>
-            <p className="text-xs text-slate-600 mt-1 leading-relaxed">{selectedSpot.shortDesc}</p>
+            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+              {lang === 'ko' && selectedSpotKo ? selectedSpotKo.shortDescKo : selectedSpot.shortDesc}
+            </p>
           </div>
           <span
             className="px-2.5 py-1 rounded-xl text-white text-[11px] font-bold flex items-center gap-1 shrink-0 shadow-2xs"
@@ -235,7 +250,12 @@ export const SeoulMap: React.FC<SeoulMapProps> = ({
             onClick={onNextStep}
             className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-display font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
           >
-            <span>Capture Photos & Voice Impression for {selectedSpot.name.split(' ')[0]}</span>
+            <span>
+              {t(
+                `${selectedSpot.nameKo} 사진 & 음성 임장 기록하기`,
+                `Capture Photos & Voice Impression for ${selectedSpot.name.split(' ')[0]}`
+              )}
+            </span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         )}

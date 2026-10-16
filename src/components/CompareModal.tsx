@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { NeighborhoodMemory } from '../types';
+import { useI18n } from '../i18n';
 import { Scale, Sparkles, X, Loader2, Mountain, Train, Trees, Volume2 } from 'lucide-react';
 
 interface CompareModalProps {
@@ -13,6 +14,7 @@ export const CompareModal: React.FC<CompareModalProps> = ({
   onClose,
   savedMemories,
 }) => {
+  const { lang, t } = useI18n();
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const [leftId, setLeftId] = useState<string>('');
   const [rightId, setRightId] = useState<string>('');
@@ -63,13 +65,21 @@ export const CompareModal: React.FC<CompareModalProps> = ({
       }
     } catch {
       setAiVerdict(
-        `${memoryA.neighborhoodName} excels in ${
-          memoryA.blueprint.terrain.slopeDegrees < memoryB.blueprint.terrain.slopeDegrees
-            ? `flat walkability (${memoryA.blueprint.terrain.slopeDegrees}° slope)`
-            : `quiet elevation (${memoryA.blueprint.traffic.noiseLevel} dB)`
-        }, while ${memoryB.neighborhoodName} offers ${memoryB.blueprint.transit.walkMinutes}-minute subway access to ${
-          memoryB.blueprint.transit.stationName
-        }.`
+        lang === 'ko'
+          ? `${memoryA.neighborhoodNameKo}은(는) ${
+              memoryA.blueprint.terrain.slopeDegrees < memoryB.blueprint.terrain.slopeDegrees
+                ? `평탄한 보행 환경(경사도 ${memoryA.blueprint.terrain.slopeDegrees}°)`
+                : `조용한 주거 쾌적성(소음 ${memoryA.blueprint.traffic.noiseLevel} dB)`
+            }에서 강점이 있으며, ${memoryB.neighborhoodNameKo}은(는) ${
+              memoryB.blueprint.transit.stationName
+            } 도보 ${memoryB.blueprint.transit.walkMinutes}분 역세권 접근성이 돋보입니다.`
+          : `${memoryA.neighborhoodName} excels in ${
+              memoryA.blueprint.terrain.slopeDegrees < memoryB.blueprint.terrain.slopeDegrees
+                ? `flat walkability (${memoryA.blueprint.terrain.slopeDegrees}° slope)`
+                : `quiet elevation (${memoryA.blueprint.traffic.noiseLevel} dB)`
+            }, while ${memoryB.neighborhoodName} offers ${memoryB.blueprint.transit.walkMinutes}-minute subway access to ${
+              memoryB.blueprint.transit.stationName
+            }.`
       );
     } finally {
       setLoadingVerdict(false);
@@ -88,29 +98,29 @@ export const CompareModal: React.FC<CompareModalProps> = ({
     const aWins = lowerIsBetter ? valA <= valB : valA >= valB;
     const bWins = lowerIsBetter ? valB <= valA : valB >= valA;
     return (
-      <div className="bg-white rounded-2xl p-3 border border-[#E6D5B8] flex flex-col gap-1.5">
+      <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200 flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-xs font-bold">
-          <span className={aWins ? 'text-[#2D6A4F]' : 'text-[#6B705C]'}>
+          <span className={aWins ? 'text-emerald-700' : 'text-slate-500'}>
             {valA}
             {unit} {aWins ? '👑' : ''}
           </span>
-          <span className="text-[#2F3E46] uppercase tracking-wider text-[11px]">{label}</span>
-          <span className={bWins ? 'text-[#E07A5F]' : 'text-[#6B705C]'}>
+          <span className="text-slate-700 uppercase tracking-wider text-[11px]">{label}</span>
+          <span className={bWins ? 'text-orange-600' : 'text-slate-500'}>
             {bWins ? '👑 ' : ''}
             {valB}
             {unit}
           </span>
         </div>
         <div className="grid grid-cols-2 gap-2 h-2">
-          <div className="bg-[#EDF6E5] rounded-full overflow-hidden flex justify-end">
+          <div className="bg-emerald-100 rounded-full overflow-hidden flex justify-end">
             <div
-              className="bg-[#52B788] h-full rounded-full"
+              className="bg-emerald-600 h-full rounded-full"
               style={{ width: `${Math.min(100, Math.max(12, valA))}%` }}
             />
           </div>
-          <div className="bg-[#FFE5D9]/60 rounded-full overflow-hidden">
+          <div className="bg-orange-100 rounded-full overflow-hidden">
             <div
-              className="bg-[#E07A5F] h-full rounded-full"
+              className="bg-orange-500 h-full rounded-full"
               style={{ width: `${Math.min(100, Math.max(12, valB))}%` }}
             />
           </div>
@@ -127,21 +137,24 @@ export const CompareModal: React.FC<CompareModalProps> = ({
       aria-labelledby="compare-dialog-title"
       onClose={onClose}
       onClick={handleDialogClick}
-      className="m-auto w-full max-w-3xl rounded-3xl border-4 border-[#E6D5B8] bg-[#FFF8F0] p-0 text-[#2F3E46] shadow-2xl backdrop:bg-black/45 backdrop:backdrop-blur-xs"
+      className="m-auto w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-black/45 backdrop:backdrop-blur-xs"
     >
       <div className="p-6 flex flex-col gap-4">
         {/* Header */}
-        <div className="flex items-center justify-between border-b-2 border-[#E6D5B8] pb-3.5">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-3.5">
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-2xl bg-[#D8F3DC] text-[#1B4332] flex items-center justify-center">
+            <span className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-800 flex items-center justify-center">
               <Scale className="w-6 h-6" />
             </span>
             <div>
-              <h2 id="compare-dialog-title" className="font-display font-extrabold text-xl text-[#2F3E46]">
-                Compare Visited Neighborhoods
+              <h2 id="compare-dialog-title" className="font-display font-extrabold text-lg sm:text-xl text-slate-900">
+                {t('방문한 동네 1:1 비교 분석', 'Compare Visited Neighborhoods')}
               </h2>
-              <p className="text-xs text-[#6B705C]">
-                Side-by-side homebuyer trade-off analysis powered by Gemini 4 Argon
+              <p className="text-xs text-slate-500">
+                {t(
+                  'Gemini 4 Argon 기반 동네별 장단점 및 실거주 트레이드오프 비교',
+                  'Side-by-side homebuyer trade-off analysis powered by Gemini 4 Argon'
+                )}
               </p>
             </div>
           </div>
@@ -149,7 +162,7 @@ export const CompareModal: React.FC<CompareModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close Comparison Modal"
-            className="p-2 rounded-2xl bg-white border border-[#E6D5B8] hover:bg-[#F4EAE0] transition"
+            className="p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -157,35 +170,37 @@ export const CompareModal: React.FC<CompareModalProps> = ({
 
         {/* Selectors */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl p-3 border-2 border-[#52B788]">
-            <label className="text-[10px] font-extrabold uppercase text-[#2D6A4F]">
-              Neighborhood A
+          <div className="bg-emerald-50/50 rounded-2xl p-3 border-2 border-emerald-500">
+            <label className="text-[10px] font-extrabold uppercase text-emerald-800">
+              {t('동네 A', 'Neighborhood A')}
             </label>
             <select
               value={memoryA.id}
               onChange={(e) => setLeftId(e.target.value)}
-              className="mt-1 w-full font-display font-bold text-sm text-[#2F3E46] bg-transparent focus:outline-none"
+              className="mt-1 w-full font-display font-bold text-sm text-slate-900 bg-transparent focus:outline-none"
             >
               {savedMemories.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.neighborhoodName} — {m.apartmentName} (Grade {m.blueprint.livabilityMetrics.overallGrade})
+                  {lang === 'ko' ? m.neighborhoodNameKo : m.neighborhoodName} — {m.apartmentName} (
+                  {t('등급', 'Grade')} {m.blueprint.livabilityMetrics.overallGrade})
                 </option>
               ))}
             </select>
           </div>
 
-          <div className="bg-white rounded-2xl p-3 border-2 border-[#E07A5F]">
-            <label className="text-[10px] font-extrabold uppercase text-[#E07A5F]">
-              Neighborhood B
+          <div className="bg-orange-50/50 rounded-2xl p-3 border-2 border-orange-500">
+            <label className="text-[10px] font-extrabold uppercase text-orange-800">
+              {t('동네 B', 'Neighborhood B')}
             </label>
             <select
               value={memoryB.id}
               onChange={(e) => setRightId(e.target.value)}
-              className="mt-1 w-full font-display font-bold text-sm text-[#2F3E46] bg-transparent focus:outline-none"
+              className="mt-1 w-full font-display font-bold text-sm text-slate-900 bg-transparent focus:outline-none"
             >
               {savedMemories.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.neighborhoodName} — {m.apartmentName} (Grade {m.blueprint.livabilityMetrics.overallGrade})
+                  {lang === 'ko' ? m.neighborhoodNameKo : m.neighborhoodName} — {m.apartmentName} (
+                  {t('등급', 'Grade')} {m.blueprint.livabilityMetrics.overallGrade})
                 </option>
               ))}
             </select>
@@ -195,28 +210,28 @@ export const CompareModal: React.FC<CompareModalProps> = ({
         {/* Metrics Comparison */}
         <div className="space-y-2">
           {renderMetricBar(
-            '⛰️ Hill Slope Angle (Lower = Flatter)',
+            t('⛰️ 언덕 경사도 (낮을수록 평지)', '⛰️ Hill Slope Angle (Lower = Flatter)'),
             memoryA.blueprint.terrain.slopeDegrees,
             memoryB.blueprint.terrain.slopeDegrees,
             '°',
             true
           )}
           {renderMetricBar(
-            '🚇 Subway Station Walk (Lower = Faster)',
+            t('🚇 지하철역 도보 시간 (낮을수록 역세권)', '🚇 Subway Station Walk (Lower = Faster)'),
             memoryA.blueprint.transit.walkMinutes,
             memoryB.blueprint.transit.walkMinutes,
-            ' min',
+            t('분', ' min'),
             true
           )}
           {renderMetricBar(
-            '🌳 Park & Greenery Score',
+            t('🌳 공원 및 녹지 점수', '🌳 Park & Greenery Score'),
             memoryA.blueprint.livabilityMetrics.natureScore,
             memoryB.blueprint.livabilityMetrics.natureScore,
             '/100',
             false
           )}
           {renderMetricBar(
-            '🔊 Street Traffic Noise (Lower = Quieter)',
+            t('🔊 도로 교통 소음 (낮을수록 조용함)', '🔊 Street Traffic Noise (Lower = Quieter)'),
             memoryA.blueprint.traffic.noiseLevel,
             memoryB.blueprint.traffic.noiseLevel,
             ' dB',
@@ -226,43 +241,43 @@ export const CompareModal: React.FC<CompareModalProps> = ({
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <div className="bg-white rounded-2xl p-3 border border-[#E6D5B8]">
-            <div className="font-display font-bold text-sm text-[#2D6A4F] mb-1">
+          <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200">
+            <div className="font-display font-bold text-sm text-emerald-800 mb-1">
               {memoryA.apartmentName}
             </div>
-            <p className="text-[#52606D] text-[11px] mb-2">{memoryA.blueprint.homebuyerInsights.aiVerdict}</p>
+            <p className="text-slate-600 text-[11px] mb-2">{memoryA.blueprint.homebuyerInsights.aiVerdict}</p>
             <div className="flex flex-wrap gap-1 text-[11px] font-semibold">
-              <span className="px-2 py-0.5 rounded-lg bg-[#EDF6E5] text-[#1B4332] flex items-center gap-1">
+              <span className="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 flex items-center gap-1">
                 <Mountain className="w-3 h-3" /> {memoryA.blueprint.terrain.slopeDegrees}°
               </span>
-              <span className="px-2 py-0.5 rounded-lg bg-[#EDF6E5] text-[#1B4332] flex items-center gap-1">
+              <span className="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 flex items-center gap-1">
                 <Train className="w-3 h-3" /> {memoryA.blueprint.transit.walkMinutes}m
               </span>
-              <span className="px-2 py-0.5 rounded-lg bg-[#EDF6E5] text-[#1B4332] flex items-center gap-1">
-                <Trees className="w-3 h-3" /> {memoryA.blueprint.trees.length} trees
+              <span className="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 flex items-center gap-1">
+                <Trees className="w-3 h-3" /> {memoryA.blueprint.trees.length} {t('그루', 'trees')}
               </span>
-              <span className="px-2 py-0.5 rounded-lg bg-[#EDF6E5] text-[#1B4332] flex items-center gap-1">
+              <span className="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 flex items-center gap-1">
                 <Volume2 className="w-3 h-3" /> {memoryA.blueprint.traffic.noiseLevel} dB
               </span>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-3 border border-[#E6D5B8]">
-            <div className="font-display font-bold text-sm text-[#E07A5F] mb-1">
+          <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200">
+            <div className="font-display font-bold text-sm text-orange-800 mb-1">
               {memoryB.apartmentName}
             </div>
-            <p className="text-[#52606D] text-[11px] mb-2">{memoryB.blueprint.homebuyerInsights.aiVerdict}</p>
+            <p className="text-slate-600 text-[11px] mb-2">{memoryB.blueprint.homebuyerInsights.aiVerdict}</p>
             <div className="flex flex-wrap gap-1 text-[11px] font-semibold">
-              <span className="px-2 py-0.5 rounded-lg bg-[#FFE5D9] text-[#9D0208] flex items-center gap-1">
+              <span className="px-2 py-0.5 rounded-lg bg-orange-100 text-orange-900 flex items-center gap-1">
                 <Mountain className="w-3 h-3" /> {memoryB.blueprint.terrain.slopeDegrees}°
               </span>
-              <span className="px-2 py-0.5 rounded-lg bg-[#FFE5D9] text-[#9D0208] flex items-center gap-1">
+              <span className="px-2 py-0.5 rounded-lg bg-orange-100 text-orange-900 flex items-center gap-1">
                 <Train className="w-3 h-3" /> {memoryB.blueprint.transit.walkMinutes}m
               </span>
-              <span className="px-2 py-0.5 rounded-lg bg-[#FFE5D9] text-[#9D0208] flex items-center gap-1">
-                <Trees className="w-3 h-3" /> {memoryB.blueprint.trees.length} trees
+              <span className="px-2 py-0.5 rounded-lg bg-orange-100 text-orange-900 flex items-center gap-1">
+                <Trees className="w-3 h-3" /> {memoryB.blueprint.trees.length} {t('그루', 'trees')}
               </span>
-              <span className="px-2 py-0.5 rounded-lg bg-[#FFE5D9] text-[#9D0208] flex items-center gap-1">
+              <span className="px-2 py-0.5 rounded-lg bg-orange-100 text-orange-900 flex items-center gap-1">
                 <Volume2 className="w-3 h-3" /> {memoryB.blueprint.traffic.noiseLevel} dB
               </span>
             </div>
@@ -270,16 +285,24 @@ export const CompareModal: React.FC<CompareModalProps> = ({
         </div>
 
         {/* Gemini 4 Argon Head-to-Head Recommendation */}
-        <div className="bg-gradient-to-r from-[#FFF3B0]/70 to-[#D8F3DC]/70 border-2 border-[#E6D5B8] rounded-2xl p-3.5 flex items-start gap-3">
-          <span className="w-8 h-8 rounded-xl bg-[#2F3E46] text-[#FFD166] flex items-center justify-center shrink-0 mt-0.5">
+        <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-3.5 flex items-start gap-3">
+          <span className="w-8 h-8 rounded-xl bg-slate-900 text-amber-300 flex items-center justify-center shrink-0 mt-0.5">
             {loadingVerdict ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
           </span>
           <div>
-            <div className="font-display font-bold text-xs text-[#2F3E46]">
-              Gemini 4 Argon Head-to-Head Homebuyer Verdict
+            <div className="font-display font-bold text-xs text-slate-900">
+              {t(
+                'Gemini 4 Argon 동네 비교 종합 의견',
+                'Gemini 4 Argon Head-to-Head Homebuyer Verdict'
+              )}
             </div>
-            <p className="text-xs text-[#2F3E46] mt-0.5 leading-relaxed">
-              {loadingVerdict ? 'Analyzing trade-offs between the two neighborhoods...' : aiVerdict}
+            <p className="text-xs text-slate-700 mt-0.5 leading-relaxed">
+              {loadingVerdict
+                ? t(
+                    '두 동네의 실거주 장단점을 비교 분석하고 있습니다...',
+                    'Analyzing trade-offs between the two neighborhoods...'
+                  )
+                : aiVerdict}
             </p>
           </div>
         </div>

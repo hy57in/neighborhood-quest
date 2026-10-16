@@ -5,6 +5,7 @@ import type {
   PolicyAnalysisResult,
 } from '../types';
 import { CharacterAvatar } from './CharacterAvatar';
+import { useI18n, PRESET_KO_TITLE, NPC_KO_INFO } from '../i18n';
 import {
   Landmark,
   ShieldCheck,
@@ -20,6 +21,7 @@ import {
 
 interface PolicyQuestPanelProps {
   neighborhoodName: string;
+  neighborhoodNameKo?: string;
   starterHomePriceMillionKRW: number;
   npcs: NpcResident[];
   presets: PolicyDocumentPreset[];
@@ -35,6 +37,7 @@ interface PolicyQuestPanelProps {
 
 export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
   neighborhoodName,
+  neighborhoodNameKo,
   starterHomePriceMillionKRW,
   npcs,
   presets,
@@ -47,6 +50,7 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
   onApprovePendingPolicy,
   onDiscardPendingPolicy,
 }) => {
+  const { lang, t } = useI18n();
   const [selectedPresetId, setSelectedPresetId] = useState<string>(presets[0].id);
   const [rawPolicyText, setRawPolicyText] = useState<string>(presets[0].rawPolicyText);
   const [showDocEditor, setShowDocEditor] = useState<boolean>(false);
@@ -57,6 +61,7 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
   };
 
   const displayPolicy = pendingPolicy || approvedPolicy;
+  const spotLabel = lang === 'ko' && neighborhoodNameKo ? neighborhoodNameKo : neighborhoodName.split(' ')[0];
 
   return (
     <div className="flex flex-col gap-4">
@@ -69,12 +74,15 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
             </span>
             <div>
               <h3 className="font-display font-extrabold text-sm sm:text-base text-slate-900">
-                PolicyQuest · Pingu & Gyodong Mortgage Simulator
+                {t(
+                  'PolicyQuest · 핑구 & 교동 내 집 마련 대출 시뮬레이터',
+                  'PolicyQuest · Pingu & Gyodong Mortgage Simulator'
+                )}
               </h3>
               <p className="text-xs text-slate-500">
-                Target Home in {neighborhoodName.split(' ')[0]}:{' '}
-                <strong className="text-slate-800">₩{starterHomePriceMillionKRW}M</strong> · Active
-                LTV {displayPolicy.extractedRules.ltvFirstTimePercent}% · DSR{' '}
+                {t(`${spotLabel} 목표 주택가:`, `Target Home in ${spotLabel}:`)}{' '}
+                <strong className="text-slate-800">₩{starterHomePriceMillionKRW}M</strong> ·{' '}
+                {t('적용 LTV', 'Active LTV')} {displayPolicy.extractedRules.ltvFirstTimePercent}% · DSR{' '}
                 {displayPolicy.extractedRules.dsrLimitPercent}%
               </p>
             </div>
@@ -82,28 +90,33 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
 
           {pendingPolicy ? (
             <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 text-[10px] font-extrabold shrink-0 animate-pulse">
-              ⏳ Pending Approval
+              {t('⏳ 승인 대기 중', '⏳ Pending Approval')}
             </span>
           ) : (
             <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-extrabold shrink-0">
-              ✓ Active Rule
+              {t('✓ 현재 적용 중', '✓ Active Rule')}
             </span>
           )}
         </div>
 
-        {/* Human-in-the-Loop Approval Banner (Shows immediately when pendingPolicy exists) */}
+        {/* Human-in-the-Loop Approval Banner */}
         {pendingPolicy && (
           <div className="bg-amber-50/90 border-2 border-amber-300 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="text-xs text-amber-950">
               <div className="font-display font-extrabold flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
                 <span>
-                  Gemini 4 Argon Verified: "{pendingPolicy.policyTitleEn}" (
-                  {pendingPolicy.verification.fidelityScore}% Math Fidelity)
+                  {t(
+                    `Gemini 4 Argon 검증 완료: "${pendingPolicy.policyTitleKo || pendingPolicy.policyTitleEn}" (정확도 ${pendingPolicy.verification.fidelityScore}%)`,
+                    `Gemini 4 Argon Verified: "${pendingPolicy.policyTitleEn}" (${pendingPolicy.verification.fidelityScore}% Math Fidelity)`
+                  )}
                 </span>
               </div>
               <p className="text-[11px] text-amber-800 mt-0.5">
-                Approve to apply these LTV/DSR rules to Pingu & Gyodong in the 3D village.
+                {t(
+                  '승인 버튼을 누르면 3D 마을 속 핑구와 교동에게 새로운 LTV/DSR 규칙이 즉시 적용됩니다.',
+                  'Approve to apply these LTV/DSR rules to Pingu & Gyodong in the 3D village.'
+                )}
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -112,7 +125,7 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
                 onClick={onDiscardPendingPolicy}
                 className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer"
               >
-                Cancel
+                {t('취소', 'Cancel')}
               </button>
               <button
                 type="button"
@@ -120,7 +133,7 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
                 className="px-3.5 py-1.5 rounded-xl text-xs font-display font-extrabold bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
                 <UserCheck className="w-3.5 h-3.5" />
-                <span>Approve & Apply to 3D World</span>
+                <span>{t('승인 및 3D 마을 적용', 'Approve & Apply to 3D World')}</span>
               </button>
             </div>
           </div>
@@ -130,7 +143,10 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-700">
-              1. Choose a Policy Scenario & Simulate with Gemini 4 Argon
+              {t(
+                '1. 부동산 정책 시나리오 선택 및 Gemini 4 Argon 시뮬레이션',
+                '1. Choose a Policy Scenario & Simulate with Gemini 4 Argon'
+              )}
             </span>
             <button
               type="button"
@@ -138,7 +154,11 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
               className="text-[11px] font-bold text-emerald-700 hover:underline flex items-center gap-0.5 cursor-pointer"
             >
               <FileText className="w-3 h-3" />
-              <span>{showDocEditor ? 'Hide Policy Text' : 'Edit Raw Policy Text'}</span>
+              <span>
+                {showDocEditor
+                  ? t('정책 원문 접기', 'Hide Policy Text')
+                  : t('정책 원문 직접 수정', 'Edit Raw Policy Text')}
+              </span>
               {showDocEditor ? (
                 <ChevronUp className="w-3 h-3" />
               ) : (
@@ -150,6 +170,7 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
             {presets.map((preset) => {
               const active = selectedPresetId === preset.id;
+              const koInfo = PRESET_KO_TITLE[preset.id];
               return (
                 <button
                   key={preset.id}
@@ -162,14 +183,14 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
                   }`}
                 >
                   <div className="font-display font-extrabold text-xs leading-snug">
-                    {preset.badge}
+                    {lang === 'ko' && koInfo ? koInfo.badge : preset.badge}
                   </div>
                   <div
                     className={`text-[10px] line-clamp-1 ${
                       active ? 'text-slate-300' : 'text-slate-500'
                     }`}
                   >
-                    {preset.title}
+                    {lang === 'ko' && koInfo ? koInfo.title : preset.title}
                   </div>
                 </button>
               );
@@ -182,7 +203,10 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
               onChange={(e) => setRawPolicyText(e.target.value)}
               rows={3}
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800 font-mono leading-relaxed focus:outline-none focus:border-emerald-600"
-              placeholder="Paste Korean or English government LTV/DSR housing policy announcement..."
+              placeholder={t(
+                '한국어 또는 영어로 된 정부 부동산/대출(LTV·DSR) 정책 발표문을 입력하세요...',
+                'Paste Korean or English government LTV/DSR housing policy announcement...'
+              )}
             />
           )}
 
@@ -195,12 +219,22 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
             {isAnalyzingPolicy ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Gemini 4 Argon Calculating & Verifying LTV/DSR...</span>
+                <span>
+                  {t(
+                    'Gemini 4 Argon이 LTV/DSR 한도를 계산 및 검증 중...',
+                    'Gemini 4 Argon Calculating & Verifying LTV/DSR...'
+                  )}
+                </span>
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                <span>Simulate Policy Impact on Pingu & Gyodong</span>
+                <span>
+                  {t(
+                    '핑구 & 교동에게 정책 시뮬레이션 실행하기',
+                    'Simulate Policy Impact on Pingu & Gyodong'
+                  )}
+                </span>
               </>
             )}
           </button>
@@ -214,6 +248,7 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
           if (!outcome) return null;
           const isSelected = selectedNpcId === npc.id;
           const isPingu = npc.id === 'npc-pingu' || npc.name.toLowerCase().includes('pingu');
+          const koNpc = NPC_KO_INFO[npc.id];
 
           return (
             <div
@@ -245,15 +280,16 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
                   <div>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <h4 className="font-display font-extrabold text-sm sm:text-base text-slate-900">
-                        {npc.name}
+                        {lang === 'ko' ? `${npc.nameKo} (${npc.name})` : `${npc.name} (${npc.nameKo})`}
                       </h4>
                       <span className="text-xs font-semibold text-slate-500">
-                        · {npc.roleTitle}
+                        · {lang === 'ko' && koNpc ? koNpc.roleTitle : npc.roleTitle}
                       </span>
                     </div>
                     <div className="text-[11px] font-semibold text-slate-500 mt-0.5">
-                      Income ₩{npc.annualIncomeMillionKRW}M/yr · Saved ₩{npc.cashSavingsMillionKRW}M
-                      · Debt ₩{npc.existingAnnualDebtPaymentMillionKRW}M/yr
+                      {lang === 'ko'
+                        ? `연소득 ₩${npc.annualIncomeMillionKRW}M · 보유자금 ₩${npc.cashSavingsMillionKRW}M · 기존부채 ₩${npc.existingAnnualDebtPaymentMillionKRW}M/년`
+                        : `Income ₩${npc.annualIncomeMillionKRW}M/yr · Saved ₩${npc.cashSavingsMillionKRW}M · Debt ₩${npc.existingAnnualDebtPaymentMillionKRW}M/yr`}
                     </div>
                   </div>
                 </div>
@@ -266,27 +302,33 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
                   }`}
                 >
                   {outcome.canBuyHome
-                    ? '🏡 HOME UNLOCKED'
-                    : `💔 ${outcome.bindingConstraint} CAPPED`}
+                    ? t('🏡 내 집 마련 성공', '🏡 HOME UNLOCKED')
+                    : t(`💔 ${outcome.bindingConstraint} 한도 제한`, `💔 ${outcome.bindingConstraint} CAPPED`)}
                 </span>
               </div>
 
               {/* Clean 3-Metric Pill Strip */}
               <div className="grid grid-cols-3 gap-2 bg-slate-50 rounded-2xl p-2.5 border border-slate-100 text-center text-xs">
                 <div>
-                  <div className="text-[10px] font-semibold text-slate-500">LTV Limit</div>
+                  <div className="text-[10px] font-semibold text-slate-500">
+                    {t('LTV 한도', 'LTV Limit')}
+                  </div>
                   <div className="font-display font-extrabold text-slate-800">
                     ₩{outcome.maxLtvLoanMillionKRW}M
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] font-semibold text-slate-500">Stress DSR Limit</div>
+                  <div className="text-[10px] font-semibold text-slate-500">
+                    {t('스트레스 DSR 한도', 'Stress DSR Limit')}
+                  </div>
                   <div className="font-display font-extrabold text-amber-700">
                     ₩{outcome.maxDsrLoanMillionKRW}M
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] font-semibold text-slate-500">Purchasing Power</div>
+                  <div className="text-[10px] font-semibold text-slate-500">
+                    {t('총 매수 가능액', 'Purchasing Power')}
+                  </div>
                   <div
                     className={`font-display font-extrabold ${
                       outcome.canBuyHome ? 'text-emerald-700' : 'text-rose-700'
@@ -299,7 +341,11 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
 
               {/* Character Speech Bubble */}
               <div className="text-xs text-slate-700 bg-slate-50/80 rounded-2xl px-3.5 py-2.5 border border-slate-200/70 italic leading-relaxed">
-                "{outcome.npcReactionDialogueEn}"
+                "
+                {lang === 'ko'
+                  ? outcome.npcReactionDialogueKo || outcome.npcReactionDialogueEn
+                  : outcome.npcReactionDialogueEn}
+                "
               </div>
             </div>
           );
@@ -311,10 +357,10 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
         <div className="flex items-center justify-between text-xs font-bold text-slate-700">
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-emerald-700" />
-            Gemini 4 Argon LTV/DSR Audit Checks
+            {t('Gemini 4 Argon LTV/DSR 수식 검증', 'Gemini 4 Argon LTV/DSR Audit Checks')}
           </span>
           <span className="text-emerald-700">
-            Fidelity {displayPolicy.verification.fidelityScore}%
+            {t('정확도', 'Fidelity')} {displayPolicy.verification.fidelityScore}%
           </span>
         </div>
         <div className="grid grid-cols-1 gap-1">
@@ -330,11 +376,11 @@ export const PolicyQuestPanel: React.FC<PolicyQuestPanelProps> = ({
               </div>
               {chk.status === 'auto_patched' ? (
                 <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-bold shrink-0 flex items-center gap-0.5">
-                  <Wrench className="w-2.5 h-2.5" /> Patched
+                  <Wrench className="w-2.5 h-2.5" /> {t('자동 보정', 'Patched')}
                 </span>
               ) : (
                 <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 text-[10px] font-bold shrink-0 flex items-center gap-0.5">
-                  <CheckCircle2 className="w-2.5 h-2.5" /> Verified
+                  <CheckCircle2 className="w-2.5 h-2.5" /> {t('검증 완료', 'Verified')}
                 </span>
               )}
             </div>

@@ -8,6 +8,7 @@ import type {
   NpcPolicyOutcome,
 } from '../types';
 import { CharacterAvatar } from './CharacterAvatar';
+import { useI18n, NPC_KO_INFO } from '../i18n';
 import {
   Camera,
   RotateCw,
@@ -59,6 +60,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
   onSelectNpc,
   approvedPolicyTitle,
 }) => {
+  const { lang, t } = useI18n();
   const mountRef = useRef<HTMLDivElement | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -988,7 +990,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
     link.download = `${blueprint.worldTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-3d-memory.png`;
     link.href = dataUrl;
     link.click();
-    setSnapshotToast('Saved 3D Postcard PNG!');
+    setSnapshotToast(t('3D 엽서 PNG 저장 완료!', 'Saved 3D Postcard PNG!'));
     setTimeout(() => setSnapshotToast(null), 2600);
   };
 
@@ -1015,13 +1017,13 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
         </div>
         <div className="mt-1.5 flex flex-wrap gap-1 text-[10px] font-semibold">
           <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/60">
-            ⛰️ {blueprint.terrain.slopeDegrees}°
+            ⛰️ {t('경사', 'Slope')} {blueprint.terrain.slopeDegrees}°
           </span>
           <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/60">
-            🚇 {blueprint.transit.walkMinutes}m
+            🚇 {t('도보', 'Walk')} {blueprint.transit.walkMinutes}{t('분', 'm')}
           </span>
           <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200/60">
-            🔊 {blueprint.traffic.noiseLevel}dB
+            🔊 {t('소음', 'Noise')} {blueprint.traffic.noiseLevel}dB
           </span>
         </div>
       </div>
@@ -1031,7 +1033,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
         <button
           type="button"
           onClick={() => setTimeOfDay('morning')}
-          title="Morning"
+          title={t('아침', 'Morning')}
           className={`p-1.5 rounded-xl text-xs transition cursor-pointer ${
             timeOfDay === 'morning'
               ? 'bg-sky-100 text-sky-900'
@@ -1043,7 +1045,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
         <button
           type="button"
           onClick={() => setTimeOfDay('golden_hour')}
-          title="Golden Hour"
+          title={t('노을', 'Golden Hour')}
           className={`p-1.5 rounded-xl text-xs transition cursor-pointer ${
             timeOfDay === 'golden_hour'
               ? 'bg-amber-100 text-amber-900'
@@ -1055,7 +1057,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
         <button
           type="button"
           onClick={() => setTimeOfDay('twilight')}
-          title="Night"
+          title={t('밤', 'Night')}
           className={`p-1.5 rounded-xl text-xs transition cursor-pointer ${
             timeOfDay === 'twilight'
               ? 'bg-slate-800 text-white'
@@ -1070,7 +1072,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
         <button
           type="button"
           onClick={() => setAutoRotate((v) => !v)}
-          title="Auto-Orbit"
+          title={t('자동 회전', 'Auto-Orbit')}
           className={`p-1.5 rounded-xl text-xs transition cursor-pointer ${
             autoRotate ? 'bg-emerald-100 text-emerald-800' : 'text-slate-500 hover:bg-slate-100'
           }`}
@@ -1080,7 +1082,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
         <button
           type="button"
           onClick={() => setShowPins((v) => !v)}
-          title="Toggle Observation Pins"
+          title={t('관측 핀 표시/숨김', 'Toggle Observation Pins')}
           className={`p-1.5 rounded-xl text-xs transition cursor-pointer ${
             showPins ? 'bg-orange-100 text-orange-800' : 'text-slate-500 hover:bg-slate-100'
           }`}
@@ -1090,7 +1092,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
         <button
           type="button"
           onClick={() => setShowNpcs((v) => !v)}
-          title="Toggle Pingu & Gyodong Badges"
+          title={t('핑구 & 교동 표시/숨김', 'Toggle Pingu & Gyodong Badges')}
           className={`p-1.5 rounded-xl text-xs transition cursor-pointer ${
             showNpcs ? 'bg-emerald-100 text-emerald-800' : 'text-slate-500 hover:bg-slate-100'
           }`}
@@ -1100,7 +1102,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
         <button
           type="button"
           onClick={handleResetCamera}
-          title="Reset View"
+          title={t('시점 초기화', 'Reset View')}
           className="p-1.5 rounded-xl text-xs text-slate-500 hover:bg-slate-100 cursor-pointer"
         >
           <RotateCcw className="w-3.5 h-3.5" />
@@ -1108,11 +1110,11 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
         <button
           type="button"
           onClick={handleSnapPostcard}
-          title="Save 3D Postcard PNG"
+          title={t('3D 엽서 저장', 'Save 3D Postcard PNG')}
           className="px-2 py-1 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 flex items-center gap-1 cursor-pointer"
         >
           <Camera className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Snap</span>
+          <span className="hidden sm:inline">{t('저장', 'Snap')}</span>
         </button>
       </div>
 
@@ -1172,7 +1174,15 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
                 mood={outcome?.canBuyHome ? 'happy' : 'worried'}
                 className="rounded-full bg-slate-100"
               />
-              <span className="whitespace-nowrap">{isPingu ? 'Pingu (핑구)' : 'Gyodong (교동)'}</span>
+              <span className="whitespace-nowrap">
+                {lang === 'ko'
+                  ? isPingu
+                    ? '핑구 (Pingu)'
+                    : '교동 (Gyodong)'
+                  : isPingu
+                  ? 'Pingu (핑구)'
+                  : 'Gyodong (교동)'}
+              </span>
               <span
                 className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
                   outcome?.canBuyHome
@@ -1181,8 +1191,8 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
                 }`}
               >
                 {outcome?.canBuyHome
-                  ? `🏡 OK`
-                  : `💔 -₩${outcome?.shortfallMillionKRW ?? 0}M`}
+                  ? t('🏡 매수가능', '🏡 OK')
+                  : t(`💔 -₩${outcome?.shortfallMillionKRW ?? 0}M 부족`, `💔 -₩${outcome?.shortfallMillionKRW ?? 0}M`)}
               </span>
             </button>
           );
@@ -1191,7 +1201,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
       {/* Mobile & Desktop On-Screen Touch D-Pad (Bottom-Left) */}
       <div
         className="absolute bottom-3 left-3 z-20 bg-white/85 backdrop-blur-md border border-slate-200/80 rounded-2xl p-1.5 shadow-sm flex flex-col items-center gap-0.5 select-none"
-        title="Walk 3D Explorer Avatar (or use WASD / Arrow Keys)"
+        title={t('3D 캐릭터 이동 (WASD / 방향키 가능)', 'Walk 3D Explorer Avatar (or use WASD / Arrow Keys)')}
       >
         <button
           type="button"
@@ -1215,7 +1225,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span className="w-6 h-6 rounded-lg bg-emerald-50 text-[9px] font-extrabold text-emerald-800 flex items-center justify-center">
-            GO
+            {t('이동', 'GO')}
           </span>
           <button
             type="button"
@@ -1248,7 +1258,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
           </span>
         ) : (
           <span className="hidden sm:inline text-[11px] font-semibold text-slate-500">
-            Talk to:
+            {t('대화하기:', 'Talk to:')}
           </span>
         )}
         {npcs.map((npc) => {
@@ -1266,7 +1276,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
               }`}
             >
               <CharacterAvatar character={isPingu ? 'pingu' : 'gyodong'} size={18} />
-              <span>{isPingu ? '핑구' : '교동'}</span>
+              <span>{lang === 'ko' ? (isPingu ? '핑구' : '교동') : isPingu ? 'Pingu' : 'Gyodong'}</span>
             </button>
           );
         })}
@@ -1306,6 +1316,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
             .map((npc) => {
               const out = npcOutcomes.find((o) => o.npcId === npc.id);
               const isPingu = npc.id === 'npc-pingu' || npc.name.toLowerCase().includes('pingu');
+              const koNpc = NPC_KO_INFO[npc.id];
               return (
                 <div key={npc.id} className="flex flex-col gap-2">
                   <div className="flex items-start justify-between gap-2">
@@ -1319,10 +1330,11 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
                       </div>
                       <div>
                         <div className="font-display font-extrabold text-sm text-slate-900">
-                          {npc.name}
+                          {lang === 'ko' ? `${npc.nameKo} (${npc.name})` : `${npc.name} (${npc.nameKo})`}
                         </div>
                         <div className="text-[11px] font-semibold text-slate-500">
-                          {npc.roleTitle} · Target ₩{out?.targetHomePriceMillionKRW ?? 920}M
+                          {lang === 'ko' && koNpc ? koNpc.roleTitle : npc.roleTitle} ·{' '}
+                          {t('목표 주택가', 'Target')} ₩{out?.targetHomePriceMillionKRW ?? 920}M
                         </div>
                       </div>
                     </div>
@@ -1338,15 +1350,23 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
                   {out && (
                     <>
                       <p className="text-xs text-slate-700 bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 italic leading-relaxed">
-                        "{out.npcReactionDialogueEn}"
+                        "
+                        {lang === 'ko'
+                          ? out.npcReactionDialogueKo || out.npcReactionDialogueEn
+                          : out.npcReactionDialogueEn}
+                        "
                       </p>
                       <div className="grid grid-cols-3 gap-1.5 text-[11px] text-center font-bold">
                         <div className="bg-slate-50 border border-slate-200 rounded-xl p-1.5">
-                          <div className="text-[10px] text-slate-500">LTV Cap</div>
+                          <div className="text-[10px] text-slate-500">
+                            {t('LTV 한도', 'LTV Cap')}
+                          </div>
                           <div className="text-slate-800">₩{out.maxLtvLoanMillionKRW}M</div>
                         </div>
                         <div className="bg-slate-50 border border-slate-200 rounded-xl p-1.5">
-                          <div className="text-[10px] text-slate-500">DSR Cap</div>
+                          <div className="text-[10px] text-slate-500">
+                            {t('DSR 한도', 'DSR Cap')}
+                          </div>
                           <div className="text-amber-700">₩{out.maxDsrLoanMillionKRW}M</div>
                         </div>
                         <div
@@ -1356,7 +1376,7 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
                               : 'bg-rose-50 border-rose-300 text-rose-900'
                           }`}
                         >
-                          <div className="text-[10px]">Total Power</div>
+                          <div className="text-[10px]">{t('총 매수력', 'Total Power')}</div>
                           <div>₩{out.totalPurchasingPowerMillionKRW}M</div>
                         </div>
                       </div>
