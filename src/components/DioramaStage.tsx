@@ -1,12 +1,149 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { Lang, NeighborhoodData, SensoryLayerType } from '../types/index.ts';
+import { CharacterAvatar } from './CharacterAvatar.tsx';
 
 interface DioramaStageProps {
   neighborhood: NeighborhoodData;
   activeLayer: SensoryLayerType;
   onSelectLayer: (layer: SensoryLayerType) => void;
   lang?: Lang;
+}
+
+/**
+ * Helper to build a detailed 3D Pingu model matching the claymation penguin reference image
+ */
+function create3DPingu(): THREE.Group {
+  const pingu = new THREE.Group();
+
+  const blackMat = new THREE.MeshStandardMaterial({ color: 0x1e242b, roughness: 0.65 });
+  const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+  const yellowMat = new THREE.MeshStandardMaterial({ color: 0xf59f00, roughness: 0.5 });
+  const redMat = new THREE.MeshStandardMaterial({ color: 0xff3b4e, roughness: 0.45 });
+  const orangeMat = new THREE.MeshStandardMaterial({ color: 0xff7a1a, roughness: 0.55 });
+
+  // Torso
+  const torso = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 16), blackMat);
+  torso.scale.set(0.95, 1.25, 0.85);
+  torso.position.y = 0.34;
+  torso.castShadow = true;
+  pingu.add(torso);
+
+  // Yellow Belly Ring
+  const yellowBelly = new THREE.Mesh(new THREE.SphereGeometry(0.235, 16, 16), yellowMat);
+  yellowBelly.scale.set(0.85, 1.12, 0.55);
+  yellowBelly.position.set(0, 0.32, 0.12);
+  pingu.add(yellowBelly);
+
+  // White Belly
+  const whiteBelly = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), whiteMat);
+  whiteBelly.scale.set(0.8, 1.06, 0.55);
+  whiteBelly.position.set(0, 0.32, 0.14);
+  pingu.add(whiteBelly);
+
+  // Head
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.21, 16, 16), blackMat);
+  head.scale.set(1.05, 0.88, 0.95);
+  head.position.y = 0.72;
+  head.castShadow = true;
+  pingu.add(head);
+
+  // Eyes
+  [-0.08, 0.08].forEach((ex) => {
+    const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.042, 10, 10), whiteMat);
+    eyeWhite.position.set(ex, 0.75, 0.17);
+    pingu.add(eyeWhite);
+
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 8), blackMat);
+    pupil.position.set(ex, 0.75, 0.2);
+    pingu.add(pupil);
+  });
+
+  // Red Round Beak
+  const beak = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 12), redMat);
+  beak.scale.set(1.2, 0.75, 1.1);
+  beak.position.set(0, 0.69, 0.21);
+  pingu.add(beak);
+
+  // Waving Right Wing (Viewer's left)
+  const waveWing = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.24, 8, 8), blackMat);
+  waveWing.position.set(-0.28, 0.56, 0.04);
+  waveWing.rotation.z = 0.55;
+  pingu.add(waveWing);
+
+  // Resting Left Wing
+  const restWing = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.24, 8, 8), blackMat);
+  restWing.position.set(0.27, 0.36, 0);
+  restWing.rotation.z = -0.35;
+  pingu.add(restWing);
+
+  // Flat Orange Feet
+  [-0.11, 0.11].forEach((fx) => {
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.22), orangeMat);
+    foot.position.set(fx, 0.03, 0.06);
+    pingu.add(foot);
+  });
+
+  return pingu;
+}
+
+/**
+ * Helper to build a detailed 3D Gyodong (Hangyodon / 한교동) model matching the mint-aqua fish character reference image
+ */
+function create3DGyodong(): THREE.Group {
+  const gyodong = new THREE.Group();
+
+  const mintMat = new THREE.MeshStandardMaterial({ color: 0x8ce0e8, roughness: 0.55 });
+  const finBlueMat = new THREE.MeshStandardMaterial({ color: 0x63b3ed, roughness: 0.55 });
+  const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45 });
+  const blackMat = new THREE.MeshStandardMaterial({ color: 0x111315, roughness: 0.5 });
+  const pinkLipsMat = new THREE.MeshStandardMaterial({ color: 0xf4a9c7, roughness: 0.5 });
+
+  // Mint-Aqua Body + Head
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.26, 14, 16), mintMat);
+  body.position.y = 0.42;
+  body.castShadow = true;
+  gyodong.add(body);
+
+  // Top Sky-Blue Fin
+  const topFin = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 10), finBlueMat);
+  topFin.scale.set(1.3, 1.1, 0.5);
+  topFin.position.set(0, 0.81, 0);
+  gyodong.add(topFin);
+
+  // Left & Right Ear Fins
+  [-0.26, 0.26].forEach((ex) => {
+    const earFin = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 10), finBlueMat);
+    earFin.scale.set(0.8, 1.1, 0.4);
+    earFin.position.set(ex, 0.54, 0);
+    gyodong.add(earFin);
+  });
+
+  // Big Twin White Googly Eyes
+  [-0.095, 0.095].forEach((ex) => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.092, 12, 12), whiteMat);
+    eye.scale.set(1, 1, 0.65);
+    eye.position.set(ex, 0.55, 0.19);
+    gyodong.add(eye);
+
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), blackMat);
+    pupil.position.set(ex * 0.85, 0.55, 0.25);
+    gyodong.add(pupil);
+  });
+
+  // Wide Chubby Pink Lips
+  const lips = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.24, 8, 12), pinkLipsMat);
+  lips.rotation.z = Math.PI / 2;
+  lips.position.set(0, 0.39, 0.21);
+  gyodong.add(lips);
+
+  // Waving Hand ("넵!")
+  const waveArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.16, 8, 8), mintMat);
+  waveArm.position.set(0.27, 0.46, 0.08);
+  waveArm.rotation.z = -0.65;
+  gyodong.add(waveArm);
+
+  return gyodong;
 }
 
 export const DioramaStage: React.FC<DioramaStageProps> = ({
@@ -21,9 +158,6 @@ export const DioramaStage: React.FC<DioramaStageProps> = ({
   const sceneStateRef = useRef<{
     targetRotY: number;
     targetZoom: number;
-    slopeGroup?: THREE.Group;
-    treesGroup?: THREE.Group;
-    lampsGroup?: THREE.Group;
   }>({
     targetRotY: 0,
     targetZoom: 1,
@@ -119,7 +253,7 @@ export const DioramaStage: React.FC<DioramaStageProps> = ({
     slopeGroup.add(hillMesh);
 
     // Warm Alley Road running up the slope
-    const roadGeo = new THREE.BoxGeometry(6.45, 0.08, 1.35);
+    const roadGeo = new THREE.BoxGeometry(6.45, 0.08, 1.45);
     const roadMat = new THREE.MeshStandardMaterial({
       color: activeLayer === 'incline' ? 0xe03e52 : 0xcbd5e1,
       roughness: 0.75,
@@ -134,8 +268,8 @@ export const DioramaStage: React.FC<DioramaStageProps> = ({
       { x: -0.6, z: -1.2, w: 1.2, h: 1.6, d: 1.15, wall: 0xfef3c7, roof: 0xd97757 },
       { x: 1.0, z: -1.0, w: 1.25, h: 1.9, d: 1.2, wall: 0xf8fafc, roof: 0x64748b },
       { x: 2.3, z: -0.9, w: 1.1, h: 1.45, d: 1.1, wall: 0xffedd5, roof: 0xe07a5f },
-      { x: -1.4, z: 1.6, w: 1.1, h: 1.15, d: 1.0, wall: 0xf1f5f9, roof: 0x94a3b8 },
-      { x: 0.4, z: 1.65, w: 1.15, h: 1.3, d: 1.05, wall: 0xfef9c3, roof: 0xd97706 },
+      { x: -1.4, z: 1.65, w: 1.1, h: 1.15, d: 1.0, wall: 0xf1f5f9, roof: 0x94a3b8 },
+      { x: 0.4, z: 1.7, w: 1.15, h: 1.3, d: 1.05, wall: 0xfef9c3, roof: 0xd97706 },
     ];
 
     houseConfigs.forEach((hc) => {
@@ -236,28 +370,28 @@ export const DioramaStage: React.FC<DioramaStageProps> = ({
     });
     slopeGroup.add(lampsGroup);
 
-    // Cute miniature Pingu & Gyodong characters walking the alley
+    // Detailed 3D Pingu (핑구) & Gyodong (교동 / 한교동) exploring the sloped alley!
     const charGroup = new THREE.Group();
-    const pinguBody = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.14, 0.18, 8, 12),
-      new THREE.MeshStandardMaterial({ color: 0x1e293b })
-    );
-    pinguBody.position.set(-0.35, 0.52, 0.4);
-    charGroup.add(pinguBody);
 
-    const gyodongBody = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.14, 0.18, 8, 12),
-      new THREE.MeshStandardMaterial({ color: 0xfbbf24 })
-    );
-    gyodongBody.position.set(0.15, 0.52, 0.45);
-    charGroup.add(gyodongBody);
+    const pinguModel = create3DPingu();
+    pinguModel.scale.set(1.15, 1.15, 1.15);
+    pinguModel.position.set(-0.55, 0.31, 0.42);
+    pinguModel.rotation.y = 0.35;
+    charGroup.add(pinguModel);
+
+    const gyodongModel = create3DGyodong();
+    gyodongModel.scale.set(1.15, 1.15, 1.15);
+    gyodongModel.position.set(0.35, 0.31, 0.48);
+    gyodongModel.rotation.y = -0.25;
+    charGroup.add(gyodongModel);
+
     slopeGroup.add(charGroup);
 
     let frameId: number;
     let clock = 0;
     const animate = () => {
       frameId = requestAnimationFrame(animate);
-      clock += 0.025;
+      clock += 0.03;
 
       // Smoothly interpolate rotation & zoom from React controls
       const targetRot = sceneStateRef.current.targetRotY;
@@ -267,8 +401,12 @@ export const DioramaStage: React.FC<DioramaStageProps> = ({
       camera.zoom += (targetZ - camera.zoom) * 0.12;
       camera.updateProjectionMatrix();
 
-      // Gentle character bobbing
-      charGroup.position.y = Math.abs(Math.sin(clock * 2)) * 0.05;
+      // Cute waddle animation for Pingu & Gyodong
+      pinguModel.position.y = 0.31 + Math.abs(Math.sin(clock * 2.2)) * 0.06;
+      pinguModel.rotation.z = Math.sin(clock * 2.2) * 0.06;
+
+      gyodongModel.position.y = 0.31 + Math.abs(Math.cos(clock * 2.2)) * 0.06;
+      gyodongModel.rotation.z = Math.cos(clock * 2.2) * 0.05;
 
       renderer.render(scene, camera);
     };
@@ -360,12 +498,21 @@ export const DioramaStage: React.FC<DioramaStageProps> = ({
         {/* Subtle Top/Bottom Gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/30 pointer-events-none" />
 
-        {/* Top Left Live Status Badge */}
-        <div className="absolute top-3.5 left-3.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-md shadow-xs">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#3182f6] animate-pulse" />
-          <span className="text-[11px] font-bold text-[#191f28] tracking-tight">
-            3D DIORAMA · SENSORY VIEW
-          </span>
+        {/* Top Left Live Status Badge + Pingu & Gyodong Duo Pill */}
+        <div className="absolute top-3.5 left-3.5 flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-md shadow-xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#3182f6] animate-pulse" />
+            <span className="text-[11px] font-bold text-[#191f28] tracking-tight">
+              3D DIORAMA
+            </span>
+          </div>
+          <div className="flex items-center gap-1 pl-1 pr-2.5 py-0.5 rounded-full bg-white/90 backdrop-blur-md shadow-xs border border-[#edf0f3]">
+            <CharacterAvatar character="pingu" size={20} />
+            <CharacterAvatar character="gyodong" size={20} />
+            <span className="text-[10px] font-extrabold text-[#191f28]">
+              {lang === 'ko' ? '핑구 & 교동' : 'Pingu & Gyodong'}
+            </span>
+          </div>
         </div>
 
         {/* Top Right Zoom Controls */}

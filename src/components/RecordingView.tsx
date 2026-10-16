@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Lang, NeighborhoodData } from '../types/index.ts';
 import { formatTimeSeconds } from '../utils/sensoryCalculations.ts';
+import { CharacterAvatar } from './CharacterAvatar.tsx';
 
 interface CapturedMoment {
   id: string;
@@ -547,7 +548,9 @@ export const RecordingView: React.FC<RecordingViewProps> = ({
       <section className="bg-white rounded-2xl p-3 border border-[#edf0f3] flex items-center justify-between gap-2">
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-[#0051ff]">
-            {lang === 'ko' ? '3-Layer 기억 분리 데모 (Jamie & Sam)' : '3-Layer Memory Demo (Jamie & Sam)'}
+            {lang === 'ko'
+              ? '3-Layer 기억 분리 데모 (핑구·Jamie & 교동·Sam)'
+              : '3-Layer Memory Demo (Pingu·Jamie & Gyodong·Sam)'}
           </span>
           <span className="text-[11px] text-[#8b95a1]">
             {lang === 'ko'
@@ -559,24 +562,26 @@ export const RecordingView: React.FC<RecordingViewProps> = ({
           <button
             type="button"
             onClick={() => setPerspective('jamie')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+            className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
               perspective === 'jamie'
                 ? 'bg-white text-[#191f28] shadow-xs'
                 : 'text-[#8b95a1] hover:text-[#191f28]'
             }`}
           >
-            👩 Jamie
+            <CharacterAvatar character="pingu" size={18} />
+            <span>{lang === 'ko' ? '핑구' : 'Pingu'}</span>
           </button>
           <button
             type="button"
             onClick={() => setPerspective('sam')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+            className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
               perspective === 'sam'
                 ? 'bg-white text-[#191f28] shadow-xs'
                 : 'text-[#8b95a1] hover:text-[#191f28]'
             }`}
           >
-            🧑 Sam
+            <CharacterAvatar character="gyodong" size={18} />
+            <span>{lang === 'ko' ? '교동' : 'Gyodong'}</span>
           </button>
         </div>
       </section>

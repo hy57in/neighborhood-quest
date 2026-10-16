@@ -1,5 +1,6 @@
 import React from 'react';
 import { Lang, MemoryLayers } from '../types/index.ts';
+import { CharacterAvatar } from './CharacterAvatar.tsx';
 
 interface QuoteCardProps {
   quote: string;
@@ -21,15 +22,20 @@ export const QuoteCard: React.FC<QuoteCardProps> = ({
   memoryLayers,
   lang = 'ko',
 }) => {
+  const activeCharacter = perspective === 'sam' ? 'gyodong' : 'pingu';
+
   return (
     <section className="bg-white rounded-2xl p-4 border border-[#edf0f3] shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col gap-2.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="w-6 h-6 rounded-full bg-[#f7f9fb] border border-[#edf0f3] flex items-center justify-center shrink-0">
+            <CharacterAvatar character={activeCharacter} size={22} />
+          </div>
           <span className="px-2 py-0.5 rounded-md bg-[#e8f3ff] text-[#3182f6] text-[11px] font-bold tracking-tight">
             {lang === 'ko' ? '현장 임장 메모' : 'Field Memory Note'}
           </span>
           <span className="text-[12px] text-[#8b95a1]">
-            · {author} {lang === 'ko' ? '기록' : 'Recorded'}
+            · {author} ({perspective === 'sam' ? (lang === 'ko' ? '교동' : 'Gyodong') : (lang === 'ko' ? '핑구' : 'Pingu')})
           </span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -37,14 +43,23 @@ export const QuoteCard: React.FC<QuoteCardProps> = ({
             <button
               type="button"
               onClick={() => onSwitchPerspective(perspective === 'jamie' ? 'sam' : 'jamie')}
-              className="px-2 py-0.5 rounded-full bg-[#f2f4f6] hover:bg-[#e5e8eb] text-[10px] font-bold text-[#4e5968] transition-colors flex items-center gap-1"
+              className="px-2 py-0.5 rounded-full bg-[#f2f4f6] hover:bg-[#e5e8eb] text-[10px] font-bold text-[#4e5968] transition-colors flex items-center gap-1 cursor-pointer"
               title={
                 lang === 'ko'
-                  ? '같은 물리적 언덕을 본 Jamie vs Sam의 관점 비교'
-                  : 'Compare Jamie vs Sam perspective on the same physical slope'
+                  ? '같은 물리적 언덕을 본 핑구(Jamie) vs 교동(Sam)의 관점 비교'
+                  : 'Compare Pingu (Jamie) vs Gyodong (Sam) perspective on the same physical slope'
               }
             >
-              <span>{perspective === 'jamie' ? '👩 Jamie' : '🧑 Sam'}</span>
+              <CharacterAvatar character={activeCharacter} size={16} />
+              <span>
+                {perspective === 'jamie'
+                  ? lang === 'ko'
+                    ? '핑구·Jamie'
+                    : 'Pingu·Jamie'
+                  : lang === 'ko'
+                    ? '교동·Sam'
+                    : 'Gyodong·Sam'}
+              </span>
               <span className="text-[#3182f6]">⇄</span>
             </button>
           )}
