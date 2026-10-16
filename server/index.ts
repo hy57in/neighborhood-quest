@@ -86,8 +86,17 @@ function buildBaselineWorld(input: FieldObservationInput): {
     noiseLevel: number;
   };
 } {
-  const notesLower = (input.voiceNoteText || '').toLowerCase();
-  const ratings = input.quickRatings;
+  const rawNote = input.voiceNoteText || (input as any).userNotes || '';
+  input.voiceNoteText = rawNote;
+  const notesLower = rawNote.toLowerCase();
+  const ratings = input.quickRatings || {
+    hillSteepness: 50,
+    parkGreenery: 60,
+    subwayWalkMinutes: 6,
+    trafficNoise: 40,
+  };
+  input.quickRatings = ratings;
+  input.photos = input.photos || [];
 
   const mentionsSteepHill =
     /언덕|경사|오르막|계단|비탈|가파른|옥수|한남|금호|steep|hill|slope|stairs|climb|incline/i.test(notesLower);

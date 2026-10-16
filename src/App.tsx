@@ -200,6 +200,18 @@ export function App() {
     );
   };
 
+  const [startRecordEmpty, setStartRecordEmpty] = useState<boolean>(false);
+
+  const handleStartFreshRecording = () => {
+    setStartRecordEmpty(true);
+    setActiveTab('record');
+    showToast(
+      lang === 'ko'
+        ? '🌱 빈 백지 상태에서 새 임장 기록을 시작합니다!'
+        : '🌱 Starting a fresh field recording from a blank slate!'
+    );
+  };
+
   const handleSynthesizeWithGemini = async (params: {
     perspective: 'jamie' | 'sam';
     moments: { title: string; description: string }[];
@@ -209,8 +221,12 @@ export function App() {
     greenWalkMinutes: number;
     quote: string;
     quoteEn: string;
+    uploadedPhotos?: string[];
   }) => {
-    // Call real Gemini 4 Argon endpoint (/api/generate-world) with timeout fallback so live demo is fast and reliable
+    const combinedNotes = params.moments
+      .map((m) => `${m.title}: ${m.description}`)
+      .join('\n');
+
     let geminiPhysical: string[] | undefined;
     let geminiSensory: string[] | undefined;
     let geminiEmotional: string[] | undefined;
@@ -224,25 +240,52 @@ export function App() {
         signal: controller.signal,
         body: JSON.stringify({
           neighborhoodId: selectedId,
-          neighborhoodName: rawNeighborhood.name,
+          neighborhoodName: rawNeighborhood.nameEn || rawNeighborhood.name,
+          neighborhoodNameKo: rawNeighborhood.name,
           district: rawNeighborhood.subName,
-          userNotes: params.moments.map((m) => `${m.title}: ${m.description}`).join('\n'),
-          perspective: params.perspective,
-          photoDataUrls: [],
+          apartmentName: rawNeighborhood.name,
+          subwayStation: rawNeighborhood.stationDistance,
+          subwayLine: 'Line 2',
+          voiceNoteText: combinedNotes || params.quote,
+          voiceLanguage: lang,
+          photos: (params.uploadedPhotos || []).map((dataUrl, idx) => ({
+            id: `up-${idx}`,
+            label: 'Uploaded Field Photo',
+            dataUrl,
+            mimeType: 'image/jpeg',
+          })),
+          quickRatings: {
+            hillSteepness: params.inclinePercent,
+            parkGreenery: Math.max(20, 100 - params.greenWalkMinutes * 7),
+            subwayWalkMinutes: 5,
+            trafficNoise: params.noiseDb,
+          },
         }),
       });
       clearTimeout(timeout);
       if (response.ok) {
         const data = await response.json();
-        if (data?.worldConfig?.memoryLayers) {
-          geminiPhysical = data.worldConfig.memoryLayers.physicalFeatures;
-          geminiSensory = data.worldConfig.memoryLayers.sensoryImpressions;
-          geminiEmotional = data.worldConfig.memoryLayers.emotionalImpressions;
+        if (data?.verification?.verifiedObservations?.length) {
+          geminiPhysical = [
+            `경사도 ${params.inclinePercent}% (${Math.max(2, Math.round(params.inclinePercent * 0.21))}° 지형 검증)`,
+            `공원 도보 ${params.greenWalkMinutes}분`,
+          ];
+          geminiSensory = [
+            `실측 소음 ${params.noiseDb}dB (${getNoiseLabel(params.noiseDb, 'ko')})`,
+            params.inclinePercent >= 60 ? '가파른 오르막 보행 체감' : '평탄하고 걷기 편한 보행로',
+          ];
+          geminiEmotional = [
+            params.perspective === 'sam'
+              ? `교동(Sam): 아늑함 ${params.cozinessPercent}% · 출퇴근/현실 체감 반영`
+              : `핑구(Jamie): 아늑함 ${params.cozinessPercent}% · 동네 감성/분위기 반영`,
+          ];
         }
       }
     } catch {
       // Fallback to local 3-layer synthesis if offline or timed out
     }
+
+    const updatedInclineAngle = Math.max(2, Math.round(params.inclinePercent * 0.21));
 
     const updatedMetrics = rawNeighborhood.metrics.map((m) => {
       if (m.type === 'incline') {
@@ -253,6 +296,8 @@ export function App() {
           numericValue: params.inclinePercent,
           status: getInclineLabel(params.inclinePercent, 'ko'),
           statusEn: getInclineLabel(params.inclinePercent, 'en'),
+          subtext: `체감 각도 약 ${updatedInclineAngle}° · 직접 기록 반영됨`,
+          subtextEn: `Est. ${updatedInclineAngle}° slope · Updated from your note`,
         };
       }
       if (m.type === 'coziness') {
@@ -263,6 +308,14 @@ export function App() {
           numericValue: params.cozinessPercent,
           status: getCozinessLabel(params.cozinessPercent, 'ko'),
           statusEn: getCozinessLabel(params.cozinessPercent, 'en'),
+          subtext:
+            params.perspective === 'sam'
+              ? '교동(Sam) 현실 체감 반영'
+              : '핑구(Jamie) 감성 체감 반영',
+          subtextEn:
+            params.perspective === 'sam'
+              ? 'Gyodong (Sam) practical impression'
+              : 'Pingu (Jamie) emotional impression',
         };
       }
       if (m.type === 'noise') {
@@ -273,6 +326,14 @@ export function App() {
           numericValue: params.noiseDb,
           status: getNoiseLabel(params.noiseDb, 'ko'),
           statusEn: getNoiseLabel(params.noiseDb, 'en'),
+          subtext:
+            params.noiseDb >= 55
+              ? '대로변 차량 소음 감지됨'
+              : '도서관 수준 정온 골목',
+          subtextEn:
+            params.noiseDb >= 55
+              ? 'Roadside traffic noise detected'
+              : 'Library-quiet residential lane',
         };
       }
       if (m.type === 'greenery') {
@@ -289,41 +350,85 @@ export function App() {
     });
 
     setNeighborhoods((prev) =>
-      prev.map((n) =>
-        n.id === selectedId
-          ? {
-              ...n,
-              perspective: params.perspective,
-              quoteAuthor: params.perspective === 'sam' ? 'Sam' : 'Jamie',
-              cozinessPercent: params.cozinessPercent,
-              noiseDb: params.noiseDb,
-              quote: params.quote,
-              quoteEn: params.quoteEn,
-              memoryLayers: {
-                physical: geminiPhysical?.length
-                  ? geminiPhysical
-                  : [`경사도 ${params.inclinePercent}% (물리 지형 검증됨)`, n.stationDistance],
-                sensory: geminiSensory?.length
-                  ? geminiSensory
-                  : [`실측 소음 ${params.noiseDb}dB`, `녹지 도보 ${params.greenWalkMinutes}분`],
-                emotional: geminiEmotional?.length
-                  ? geminiEmotional
-                  : [
-                      params.perspective === 'sam'
-                        ? `체감 아늑함 ${params.cozinessPercent}% · 출퇴근 경사 부담`
-                        : `체감 아늑함 ${params.cozinessPercent}% · 아늑한 골든아워 골목`,
-                    ],
-              },
-              metrics: updatedMetrics,
-            }
-          : n
-      )
+      prev.map((n) => {
+        if (n.id !== selectedId) return n;
+
+        const newPhotos =
+          params.uploadedPhotos && params.uploadedPhotos.length > 0
+            ? [
+                ...params.uploadedPhotos.map((url, idx) => ({
+                  id: `user-photo-${Date.now()}-${idx}`,
+                  url,
+                  alt: '직접 업로드한 현장 사진',
+                  altEn: 'User uploaded field photo',
+                  caption: '방금 직접 촬영·업로드한 동네 사진',
+                  captionEn: 'Just uploaded from your field visit',
+                  tag: '직접 촬영',
+                  tagEn: 'Your Photo',
+                  timestamp: '방금 전',
+                })),
+                ...n.photos,
+              ]
+            : n.photos;
+
+        return {
+          ...n,
+          perspective: params.perspective,
+          quoteAuthor: params.perspective === 'sam' ? 'Sam' : 'Jamie',
+          inclinePercent: params.inclinePercent,
+          inclineAngleDeg: updatedInclineAngle,
+          cozinessPercent: params.cozinessPercent,
+          noiseDb: params.noiseDb,
+          greenWalkMinutes: params.greenWalkMinutes,
+          quote: params.quote,
+          quoteEn: params.quoteEn,
+          audioMemo: {
+            ...n.audioMemo,
+            title:
+              params.perspective === 'sam'
+                ? '현장 음성·메모 기록 (교동·Sam)'
+                : '현장 음성·메모 기록 (핑구·Jamie)',
+            titleEn:
+              params.perspective === 'sam'
+                ? 'Field Voice & Note (Gyodong·Sam)'
+                : 'Field Voice & Note (Pingu·Jamie)',
+            recordedAt: '방금 직접 기록됨',
+            recordedAtEn: 'Recorded just now',
+            transcript: params.quote.replace(/^“|”$/g, ''),
+            transcriptEn: params.quoteEn.replace(/^“|”$/g, ''),
+          },
+          photos: newPhotos,
+          memoryLayers: {
+            physical: geminiPhysical?.length
+              ? geminiPhysical
+              : [
+                  `경사도 ${params.inclinePercent}% (${updatedInclineAngle}° 지형)`,
+                  `공원 도보 ${params.greenWalkMinutes}분`,
+                ],
+            sensory: geminiSensory?.length
+              ? geminiSensory
+              : [
+                  `실측 소음 ${params.noiseDb}dB (${getNoiseLabel(params.noiseDb, 'ko')})`,
+                  params.inclinePercent >= 60 ? '오르막 경사 체감' : '평탄한 보행 체감',
+                ],
+            emotional: geminiEmotional?.length
+              ? geminiEmotional
+              : [
+                  params.perspective === 'sam'
+                    ? `교동(Sam): 아늑함 ${params.cozinessPercent}% · 현실 체감 반영`
+                    : `핑구(Jamie): 아늑함 ${params.cozinessPercent}% · 감성 체감 반영`,
+                ],
+          },
+          metrics: updatedMetrics,
+        };
+      })
     );
 
+    setStartRecordEmpty(false);
     showToast(
       lang === 'ko'
-        ? '✨ Gemini 4 Argon이 멀티모달 기억을 3D 디오라마로 합성했습니다!'
-        : '✨ Gemini 4 Argon synthesized your memories into a 3D Diorama!'
+        ? '✨ 직접 기록한 내용이 3D 디오라마와 감각 지표에 반영되었습니다!'
+        : '✨ Your custom recording is now live in the 3D Diorama!'
     );
   };
 
@@ -375,23 +480,34 @@ export function App() {
       <main className="max-w-md mx-auto pt-16 px-4 flex flex-col gap-4">
         {activeTab === 'diorama' && (
           <>
-            {/* Live Recording Status Quick Jump Banner */}
-            <div
-              onClick={() => setActiveTab('record')}
-              className="bg-white px-3.5 py-2.5 rounded-2xl border border-[#edf0f3] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-between cursor-pointer hover:border-[#0051ff]/40 transition-all"
-            >
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                <span className="text-[12px] font-bold text-[#191f28]">
+            {/* Live Recording Status Quick Jump Banner + Fresh Start CTA */}
+            <div className="bg-white px-3.5 py-2.5 rounded-2xl border border-[#edf0f3] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-between gap-2">
+              <div
+                onClick={() => {
+                  setStartRecordEmpty(false);
+                  setActiveTab('record');
+                }}
+                className="flex items-center gap-2 cursor-pointer min-w-0"
+              >
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shrink-0" />
+                <span className="text-[12px] font-bold text-[#191f28] truncate">
                   {lang === 'ko'
-                    ? '실시간 임장 기록 중 (Quest #09)'
-                    : 'Live Field Recording Active (Quest #09)'}
+                    ? '직접 동네 기록해보기'
+                    : 'Record Your Visit'}
                 </span>
               </div>
-              <span className="text-[11px] font-bold text-[#0051ff] flex items-center gap-0.5">
-                <span>{lang === 'ko' ? '기록 화면 열기' : 'Open Recorder'}</span>
-                <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleStartFreshRecording}
+                  className="px-2.5 py-1 rounded-full bg-[#0051ff] hover:bg-[#0041cc] text-white text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[13px]">add_circle</span>
+                  <span>
+                    {lang === 'ko' ? '빈 상태에서 새로 기록' : 'Start Fresh (Empty)'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* 1. 3D Diorama Interactive Stage */}
@@ -467,6 +583,7 @@ export function App() {
         {activeTab === 'record' && (
           <RecordingView
             neighborhood={currentNeighborhood}
+            startEmpty={startRecordEmpty}
             onFinishToDiorama={() => setActiveTab('diorama')}
             onSynthesizeWithGemini={handleSynthesizeWithGemini}
             lang={lang}
