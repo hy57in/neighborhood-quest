@@ -58,7 +58,9 @@ export interface ObservationPinSpec {
   x: number;
   z: number;
   sentiment: 'positive' | 'neutral' | 'caution';
-  evidenceType?: 'verified_observation' | 'ai_interpretation';
+  evidenceType?: 'verified_observation' | 'ai_interpretation' | 'subjective_emotion';
+  memoryLayer?: 'physical' | 'sensory' | 'emotional';
+  sourceModality?: 'photo' | 'voice' | 'video' | 'text';
 }
 
 export interface VerificationCheck {
@@ -79,8 +81,9 @@ export interface VerificationReport {
   iterationsRun: number;
   patchCount: number;
   summary: string;
-  verifiedObservations: string[]; // Directly supported by user photos/voice notes
+  verifiedObservations: string[]; // Physical & sensory observations directly supported by photos/voice/video
   aiInterpretations: string[]; // Stylized or inferred context clearly distinguished from facts
+  emotionalImpressions?: string[]; // Subjective feelings preserved as personal impressions, not objective facts
   checks: VerificationCheck[];
 }
 

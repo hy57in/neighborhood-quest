@@ -107,6 +107,14 @@ function buildBaselineWorld(input: FieldObservationInput): {
     /한강|석촌호수|호수|강변|성수|옥수|잠실|river|han river|lake|waterfront/i.test(
       `${notesLower} ${input.neighborhoodName} ${input.neighborhoodNameKo}`
     );
+  const mentionsOverwhelmedOrTired =
+    /힘들|지치|지쳤|숨차|답답|복잡|부담|무섭|불안|어둡|위험|피곤|overwhelmed|exhausted|tiring|crowded|stressful|unsafe|dark/i.test(
+      notesLower
+    );
+  const mentionsCozyOrPeaceful =
+    /따뜻|아늑|평화|힐링|설레|살고 싶|마음에 들|좋았|행복|여유|cozy|peaceful|warm|healing|lovely|charming|calm/i.test(
+      notesLower
+    );
 
   let verifiedSlopeDegrees = Math.round((ratings.hillSteepness / 100) * 22);
   if (mentionsSteepHill && verifiedSlopeDegrees < 14) verifiedSlopeDegrees = 17;
@@ -130,21 +138,37 @@ function buildBaselineWorld(input: FieldObservationInput): {
   const isLakeOrRiver = mentionsRiverOrLake;
   const isBrickCafeVibe = mentionsCafe || /성수|연남|seongsu|yeonnam/i.test(input.neighborhoodName);
 
+  const inferredTimeOfDay: SceneBlueprint['timeOfDay'] = mentionsOverwhelmedOrTired
+    ? 'twilight'
+    : mentionsCozyOrPeaceful
+    ? 'golden_hour'
+    : verifiedNoiseLevel >= 65
+    ? 'twilight'
+    : 'golden_hour';
+
   const verifiedObservations: string[] = [
     verifiedSlopeDegrees >= 11
-      ? `Steep ${verifiedSlopeDegrees}° uphill incline & stairs verified from voice note and hill rating (${ratings.hillSteepness}%).`
-      : `Flat, walkable ${verifiedSlopeDegrees}° terrain verified from field observation.`,
-    `${verifiedWalkMinutes}-minute walk to ${input.subwayStation} (${input.subwayLine}) verified from transit observation.`,
-    `Park & tree canopy density (${verifiedTreeCount} stylized trees) verified from ${ input.photos.length } field photos & greenery rating (${ratings.parkGreenery}%).`,
+      ? `[Physical · Terrain] Steep ${verifiedSlopeDegrees}° uphill incline & stairs verified from voice note and hill rating (${ratings.hillSteepness}%).`
+      : `[Physical · Terrain] Flat, walkable ${verifiedSlopeDegrees}° terrain verified from field observation.`,
+    `[Physical · Transit] ${verifiedWalkMinutes}-minute walk to ${input.subwayStation} (${input.subwayLine}) verified from transit observation.`,
+    `[Physical · Nature] Park & tree canopy density (${verifiedTreeCount} stylized trees) verified from ${input.photos.length} field photos & greenery rating (${ratings.parkGreenery}%).`,
     verifiedNoiseLevel >= 55
-      ? `Active roadside traffic noise (${verifiedNoiseLevel} dB) verified from voice note — rendered as 3D acoustic wave rings.`
-      : `Quiet residential acoustics (${verifiedNoiseLevel} dB) verified inside the apartment block.`,
+      ? `[Sensory · Acoustics] Active roadside traffic noise (${verifiedNoiseLevel} dB) verified from voice note — rendered as 3D acoustic wave rings.`
+      : `[Sensory · Acoustics] Quiet residential acoustics (${verifiedNoiseLevel} dB) verified inside the apartment block.`,
+  ];
+
+  const emotionalImpressions: string[] = [
+    mentionsOverwhelmedOrTired
+      ? `[Subjective Emotion] Visitor felt physically tired or overwhelmed by the uphill climb / evening street bustle (preserved as personal feeling, NOT an objective safety or defect metric).`
+      : mentionsCozyOrPeaceful
+      ? `[Subjective Emotion] Visitor felt warm, peaceful, and emotionally drawn to the cozy park & alley atmosphere (rendered via golden-hour lighting).`
+      : `[Subjective Emotion] Visitor felt a balanced, everyday residential comfort while exploring ${input.neighborhoodName}.`,
   ];
 
   const aiInterpretations: string[] = [
-    `Stylized Animal Crossing-inspired pastel palette & miniature building proportions (not a photorealistic CAD scan).`,
-    `Inferred best-fit homebuyer persona based on transit commute vs. slope walkability trade-offs.`,
-    `Ambient golden-hour sunlight and cozy street cafe terrace placement synthesized for neighborhood vibe.`,
+    `Stylized Animal Crossing-inspired pastel palette & miniature building proportions (personal 3D memory, not a photorealistic CAD twin).`,
+    `Mood lighting (${inferredTimeOfDay === 'twilight' ? 'cool twilight ambiance' : 'warm golden-hour sunlight'}) synthesized to reflect how the visitor felt there.`,
+    ...emotionalImpressions,
   ];
 
   const buildings: BuildingSpec[] = [
@@ -190,7 +214,7 @@ function buildBaselineWorld(input: FieldObservationInput): {
     {
       id: 'mart-local',
       kind: 'convenience_store',
-      label: 'Policy Bank & Mart',
+      label: 'Neighborhood Studio & Mart',
       x: 1.75,
       z: -0.25,
       width: 0.85,
@@ -250,32 +274,36 @@ function buildBaselineWorld(input: FieldObservationInput): {
       title: verifiedSlopeDegrees >= 11 ? `Steep Incline (${verifiedSlopeDegrees}°)` : `Gentle Terrain (${verifiedSlopeDegrees}°)`,
       detail:
         verifiedSlopeDegrees >= 11
-          ? 'Verified Observation: Hillside stairs & noticeable uphill climb to apartment entrance.'
-          : 'Verified Observation: Flat, stroller- and bike-friendly pedestrian paths.',
+          ? 'Physical Feature (Photo/Voice): Hillside stairs & noticeable uphill climb to apartment entrance.'
+          : 'Physical Feature (Photo/Voice): Flat, stroller- and bike-friendly pedestrian paths.',
       category: 'hill',
       icon: '⛰️',
       x: 1.35,
       z: -1.45,
       sentiment: verifiedSlopeDegrees >= 14 ? 'caution' : 'positive',
       evidenceType: 'verified_observation',
+      memoryLayer: 'physical',
+      sourceModality: 'voice',
     },
     {
       id: 'pin-subway',
       title: `${input.subwayStation} (${verifiedWalkMinutes} min)`,
-      detail: `Verified Observation: ${input.subwayLine} access at ${verifiedWalkMinutes} minutes on foot.`,
+      detail: `Physical Feature (Map/Voice): ${input.subwayLine} access at ${verifiedWalkMinutes} minutes on foot.`,
       category: 'subway',
       icon: '🚇',
       x: 2.05,
       z: 1.25,
       sentiment: verifiedWalkMinutes <= 8 ? 'positive' : 'neutral',
       evidenceType: 'verified_observation',
+      memoryLayer: 'physical',
+      sourceModality: 'photo',
     },
     {
       id: 'pin-park',
       title: greenFactor >= 70 ? 'Lush Park Trail' : 'Pocket Green Space',
       detail:
         greenFactor >= 70
-          ? 'Verified Observation: Dense cherry blossoms and walking trail right outside the complex.'
+          ? 'Physical Feature (Photo): Dense cherry blossoms and walking trail right outside the complex.'
           : 'AI Interpretation: Stylized courtyard trees around the residential block.',
       category: 'park',
       icon: '🌳',
@@ -283,20 +311,43 @@ function buildBaselineWorld(input: FieldObservationInput): {
       z: -0.35,
       sentiment: greenFactor >= 60 ? 'positive' : 'neutral',
       evidenceType: greenFactor >= 70 ? 'verified_observation' : 'ai_interpretation',
+      memoryLayer: 'physical',
+      sourceModality: 'photo',
     },
     {
       id: 'pin-noise',
       title: verifiedNoiseLevel >= 55 ? `Traffic Noise (${verifiedNoiseLevel} dB)` : `Quiet Zone (${verifiedNoiseLevel} dB)`,
       detail:
         verifiedNoiseLevel >= 55
-          ? 'Verified Observation: Roadside acoustic waves detected near main avenue; prefer interior-facing buildings.'
-          : 'Verified Observation: Calm residential acoustic profile insulated from main arterial traffic.',
+          ? 'Sensory Detail (Voice/Audio): Roadside acoustic waves detected near main avenue.'
+          : 'Sensory Detail (Voice/Audio): Calm residential acoustic profile insulated from traffic.',
       category: 'noise',
       icon: verifiedNoiseLevel >= 55 ? '🔊' : '🍃',
       x: 0.0,
       z: 1.55,
       sentiment: verifiedNoiseLevel >= 60 ? 'caution' : 'positive',
       evidenceType: 'verified_observation',
+      memoryLayer: 'sensory',
+      sourceModality: 'voice',
+    },
+    {
+      id: 'pin-emotion',
+      title: mentionsOverwhelmedOrTired
+        ? 'Felt Tiring & Crowded'
+        : mentionsCozyOrPeaceful
+        ? 'Felt Peaceful & Cozy'
+        : 'Warm Everyday Vibe',
+      detail: mentionsOverwhelmedOrTired
+        ? 'Subjective Emotion (Personal Impression — Not Objective Fact): Visitor felt exhausted by the uphill walk and traffic noise.'
+        : 'Subjective Emotion (Personal Impression — Not Objective Fact): Visitor felt healed and at home in the alley & park atmosphere.',
+      category: 'vibe',
+      icon: mentionsOverwhelmedOrTired ? '💭' : '💛',
+      x: -1.65,
+      z: 0.85,
+      sentiment: mentionsOverwhelmedOrTired ? 'caution' : 'positive',
+      evidenceType: 'subjective_emotion',
+      memoryLayer: 'emotional',
+      sourceModality: 'text',
     },
   ];
 
@@ -312,17 +363,19 @@ function buildBaselineWorld(input: FieldObservationInput): {
 
   const blueprint: SceneBlueprint = {
     worldTitle: `${input.neighborhoodName} Miniature Haven`,
-    tagline: `Cozy 3D Field Memory of ${input.apartmentName}`,
-    englishSummary: `Stylized 3D diorama of ${input.neighborhoodName} (${input.district}) representing ${input.apartmentName}: ${verifiedSlopeDegrees}° ${
+    tagline: `We bring how you felt at ${input.apartmentName} to life`,
+    englishSummary: `Personal 3D memory of ${input.neighborhoodName} (${input.district}): ${verifiedSlopeDegrees}° ${
       verifiedSlopeDegrees >= 11 ? 'hillside incline with stairs' : 'flat terrain'
-    }, ${verifiedWalkMinutes}-min walk to ${input.subwayStation}, ${verifiedTreeCount} park trees, and ${verifiedNoiseLevel} dB street acoustics.`,
+    }, ${verifiedWalkMinutes}-min walk to ${input.subwayStation}, ${verifiedTreeCount} park trees, ${verifiedNoiseLevel} dB street acoustics, and ${
+      inferredTimeOfDay === 'twilight' ? 'reflective twilight mood' : 'warm golden-hour atmosphere'
+    }.`,
     originalNotesSummary: input.voiceNoteText || 'Field visit recorded with ratings and neighborhood photos.',
-    timeOfDay: 'golden_hour',
+    timeOfDay: inferredTimeOfDay,
     islandPalette: {
-      grassColor: '#95D5B2',
+      grassColor: inferredTimeOfDay === 'twilight' ? '#74C69D' : '#95D5B2',
       earthColor: '#DDA15E',
       roadColor: '#E6CCB2',
-      skyAccentColor: '#FFE5D9',
+      skyAccentColor: inferredTimeOfDay === 'twilight' ? '#C7D2FE' : '#FFE5D9',
       waterColor: '#72EFDD',
     },
     terrain: {

@@ -83,6 +83,12 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
   const [snapshotToast, setSnapshotToast] = useState<string | null>(null);
   const [nearbyNpcName, setNearbyNpcName] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (blueprint.timeOfDay) {
+      setTimeOfDay(blueprint.timeOfDay);
+    }
+  }, [blueprint.timeOfDay]);
+
   const getTerrainHeightAt = (x: number, z: number, slopeDeg: number): number => {
     const slopeRad = THREE.MathUtils.degToRad(Math.min(26, Math.max(0, slopeDeg)));
     if (z < 0.5) {
@@ -1134,6 +1140,8 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
               className={`absolute z-10 px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm border transition-transform hover:scale-105 flex items-center gap-1 cursor-pointer ${
                 activePinId === pin.id
                   ? 'bg-slate-900 text-white border-amber-300 scale-105'
+                  : pin.evidenceType === 'subjective_emotion' || pin.memoryLayer === 'emotional'
+                  ? 'bg-amber-50/95 text-amber-900 border-amber-300'
                   : pin.sentiment === 'caution'
                   ? 'bg-rose-50/95 text-rose-800 border-rose-200'
                   : 'bg-white/95 text-slate-800 border-slate-200'
@@ -1287,24 +1295,46 @@ export const World3DDiorama: React.FC<World3DDioramaProps> = ({
         <div className="absolute bottom-24 left-3 right-3 sm:right-auto sm:max-w-xs bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-3 shadow-lg z-30">
           {blueprint.pins
             .filter((p) => p.id === activePinId)
-            .map((p) => (
-              <div key={p.id} className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-1.5 font-display font-bold text-xs sm:text-sm text-slate-800">
-                    <span>{p.icon}</span>
-                    <span>{p.title}</span>
+            .map((p) => {
+              const isEmotional =
+                p.evidenceType === 'subjective_emotion' || p.memoryLayer === 'emotional';
+              const isVerified = p.evidenceType === 'verified_observation';
+              return (
+                <div key={p.id} className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+                          isEmotional
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : isVerified
+                            ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                            : 'bg-violet-100 text-violet-900 border border-violet-200'
+                        }`}
+                      >
+                        {isEmotional
+                          ? t('💛 주관적 감정 기록 (객관적 사실 아님)', '💛 Subjective Emotion (Personal Feeling)')
+                          : isVerified
+                          ? t('📸 멀티모달 검증 사실', '📸 Verified Multimodal Evidence')
+                          : t('✦ AI 공간 스토리텔링', '✦ AI Spatial Interpretation')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-display font-bold text-xs sm:text-sm text-slate-800">
+                      <span>{p.icon}</span>
+                      <span>{p.title}</span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">{p.detail}</p>
                   </div>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">{p.detail}</p>
+                  <button
+                    type="button"
+                    onClick={() => onSelectPin(null)}
+                    className="text-xs font-bold text-slate-400 hover:text-slate-700 px-1 cursor-pointer"
+                  >
+                    ✕
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onSelectPin(null)}
-                  className="text-xs font-bold text-slate-400 hover:text-slate-700 px-1 cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
+              );
+            })}
         </div>
       )}
 
